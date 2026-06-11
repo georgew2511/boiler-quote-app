@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
@@ -16,9 +17,16 @@ export default async function AdminPage() {
     return (
         <main className="min-h-screen bg-slate-100">
             <div className="flex min-h-screen">
-                <aside className="w-72 bg-slate-950 text-white">
+                <aside className="flex w-72 flex-col bg-slate-950 text-white">
                     <div className="border-b border-slate-800 p-8">
-                        <h1 className="text-3xl font-bold">{company.company_name}</h1>
+                        <Image
+                            src="/relode-logo.png"
+                            alt="Relode"
+                            width={220}
+                            height={60}
+                            priority
+                            className="h-auto w-auto"
+                        />
                         <p className="mt-2 text-sm text-slate-400">Admin Portal</p>
                     </div>
 
@@ -65,6 +73,13 @@ export default async function AdminPage() {
                             Settings
                         </a>
                     </nav>
+                    <div className="mt-auto border-t border-slate-800 p-6">
+                        <img
+                            src="/relode-logo.png"
+                            alt="Relode"
+                            className="mx-auto h-10 w-auto opacity-80"
+                        />
+                    </div>
                 </aside>
 
                 <section className="flex-1 p-10">
