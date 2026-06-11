@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
@@ -23,9 +23,10 @@ const fallbackPricing = {
   lowFlue: 50,
   flueStructure: 120,
   flueNearWindow: 120,
+  sundries: 150,
 }
 
-export default function Home() {
+function CalculatorContent() {
   const [step, setStep] = useState(0)
   const [loadingIndex, setLoadingIndex] = useState(0)
   const searchParams = useSearchParams()
@@ -610,7 +611,7 @@ export default function Home() {
                   onClick={() => selectAnswer(option)}
                   className="rounded-xl border border-gray-300 p-5 text-center hover:border-green-500 min-h-[140px] flex flex-col items-center justify-center"
                 >
-                  {option.image && (
+                  {'image' in option && option.image && (
                     <Image
                       src={option.image}
                       alt={option.label}
@@ -1851,5 +1852,18 @@ export default function Home() {
         )
       })()}
     </main>
+  )
+}
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <CalculatorContent />
+    </Suspense>
   )
 }
