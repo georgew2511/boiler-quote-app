@@ -93,7 +93,7 @@ export default function LoginPage() {
                     <img
                         src="/relode-logo-white.png"
                         alt="Relode"
-                        className="mx-auto h-32 w-auto"
+                        className="mx-auto h-62 w-auto"
                     />
                     <p className="mt-3 text-slate-400">
                         Sign in to access your quote calculator dashboard.
