@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 export default function SettingsPage() {
     const logoInputRef = useRef<HTMLInputElement>(null)
     const [companyId, setCompanyId] = useState<string | null>(null)
+    const [uploadingLogo, setUploadingLogo] = useState(false)
     const router = useRouter()
 
     const supabase = createClient()
@@ -34,6 +35,75 @@ export default function SettingsPage() {
         quote_subheading: '',
     })
 
+    const handleLogoUpload = async (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+        try {
+            const file = event.target.files?.[0]
+
+            if (!file) return
+
+            if (!companyId) {
+                alert('No company found')
+                return
+            }
+
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload an image file')
+                return
+            }
+
+            const maxFileSize = 2 * 1024 * 1024
+
+            if (file.size > maxFileSize) {
+                alert('Logo file is too large. Please upload an image under 2MB.')
+                return
+            }
+
+            setUploadingLogo(true)
+
+            const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png'
+            const safeFileName = `logo-${Date.now()}.${fileExt}`
+            const filePath = `${companyId}/${safeFileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('company-assets')
+                .upload(filePath, file, {
+                    cacheControl: '3600',
+                    contentType: file.type,
+                    upsert: true,
+                })
+
+            if (uploadError) {
+                console.error('Supabase logo upload error:', uploadError)
+                alert(`Failed to upload logo: ${uploadError.message}`)
+                return
+            }
+
+            const { data } = supabase.storage
+                .from('company-assets')
+                .getPublicUrl(filePath)
+
+            if (!data.publicUrl) {
+                alert('Logo uploaded, but no public URL was returned')
+                return
+            }
+
+            setSettings((prev) => ({
+                ...prev,
+                logo_url: data.publicUrl,
+            }))
+
+            alert('Logo uploaded successfully. Remember to save company settings.')
+        } catch (error) {
+            console.error('Unexpected logo upload error:', error)
+            alert('Failed to upload logo. Check the browser console for details.')
+        } finally {
+            setUploadingLogo(false)
+            event.target.value = ''
+        }
+    }
+
     useEffect(() => {
         const loadSettings = async () => {
             try {
@@ -41,15 +111,24 @@ export default function SettingsPage() {
                     data: { user },
                 } = await supabase.auth.getUser()
 
-                if (!user) return
+                if (!user) {
+                    alert('No user found')
+                    return
+                }
 
-                const { data: company } = await supabase
+                const { data: company, error: companyError } = await supabase
                     .from('companies')
-                    .select('id, company_name')
+                    .select('*')
                     .eq('owner_user_id', user.id)
                     .single()
 
-                if (!company) return
+                if (companyError || !company) {
+                    console.error(companyError)
+                    alert('No company found for this account')
+                    return
+                }
+
+
 
                 setCompanyId(company.id)
                 setSettings((prev) => ({
@@ -121,6 +200,7 @@ export default function SettingsPage() {
                                     ref={logoInputRef}
                                     type="file"
                                     accept="image/*"
+                                    onChange={handleLogoUpload}
                                     className="hidden"
                                 />
 
@@ -135,40 +215,29 @@ export default function SettingsPage() {
 
                                     <button
                                         type="button"
+                                        disabled={uploadingLogo}
                                         onClick={() => logoInputRef.current?.click()}
-                                        className="rounded-lg border bg-gray-100 px-4 py-3 font-medium hover:bg-gray-200"
+                                        className="rounded-lg border bg-gray-100 px-4 py-3 font-medium hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
-                                        Upload Logo
+                                        {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
                                     </button>
+                                    {settings.logo_url && (
+                                        <div className="mt-4">
+                                            <img
+                                                src={settings.logo_url}
+                                                alt="Company Logo"
+                                                className="h-20 w-auto"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
 
                                 <p className="mt-2 text-sm text-gray-500">
                                     Upload a logo or paste an image URL.
                                 </p>
-                                <p className="mt-1 text-xs text-gray-400">
-                                    Next step: connect this upload to a Supabase Storage bucket called company-assets and save the returned URL into company_settings.logo_url.
-                                </p>
+
                             </div>
 
-                            <div>
-                                <label className="mb-2 block font-medium">Primary Colour</label>
-                                <input
-                                    type="color"
-                                    value={settings.primary_colour}
-                                    onChange={(e) => setSettings({ ...settings, primary_colour: e.target.value })}
-                                    className="h-12 w-full rounded-lg border"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block font-medium">Secondary Colour</label>
-                                <input
-                                    type="color"
-                                    value={settings.secondary_colour}
-                                    onChange={(e) => setSettings({ ...settings, secondary_colour: e.target.value })}
-                                    className="h-12 w-full rounded-lg border"
-                                />
-                            </div>
                         </div>
                     </div>
 
@@ -396,10 +465,7 @@ These events are automatically pushed by the quote calculator and can be connect
                         <button
                             onClick={async () => {
                                 try {
-                                    if (!companyId) {
-                                        alert('No company found for this account')
-                                        return
-                                    }
+
                                     const { data: updatedCompany, error: companyUpdateError } = await supabase
                                         .from('companies')
                                         .update({

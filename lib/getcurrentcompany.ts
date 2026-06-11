@@ -38,5 +38,21 @@ export async function getCurrentCompany() {
 
     const company = companies[0]
 
-    return company
+    const { data: settings, error: settingsError } = await supabaseAuth
+        .from('company_settings')
+        .select('*')
+        .eq('company_name', company.company_name)
+
+    console.log('SETTINGS:', settings)
+    console.log('SETTINGS ERROR:', settingsError)
+    console.log('COMPANY NAME:', company.company_name)
+
+    const logoUrl = Array.isArray(settings)
+        ? settings.find((s) => s.logo_url)?.logo_url
+        : settings?.logo_url
+
+    return {
+        ...company,
+        logo_url: logoUrl || null,
+    }
 }
