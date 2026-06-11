@@ -88,12 +88,12 @@ export default function LoginPage() {
         <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,#1e293b_0%,#020617_60%)]" />
 
-            <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur">
+            <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 px-8 pb-8 pt-4 shadow-2xl backdrop-blur">
                 <div className="mb-1 text-center">
                     <img
                         src="/relode-logo-white.png"
                         alt="Relode"
-                        className="mx-auto h-64 w-auto"
+                        className="mx-auto w-[280px] h-auto"
                     />
                     <p className="mt-0 text-slate-400">
                         Sign in to access your quote calculator dashboard.
