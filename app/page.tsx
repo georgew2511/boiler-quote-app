@@ -1,5 +1,5 @@
 'use client'
-
+import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -90,7 +90,11 @@ export default function LoginPage() {
 
             <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur">
                 <div className="mb-8 text-center">
-                    <h1 className="text-4xl font-bold text-white">Relode</h1>
+                    <img
+                        src="/relode-logo-white.png"
+                        alt="Relode"
+                        className="mx-auto h-16 w-auto"
+                    />
                     <p className="mt-3 text-slate-400">
                         Sign in to access your quote calculator dashboard.
                     </p>

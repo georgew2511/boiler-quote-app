@@ -20,7 +20,7 @@ export default async function AdminPage() {
                 <aside className="flex w-72 flex-col bg-slate-950 text-white">
                     <div className="border-b border-slate-800 p-8">
                         <Image
-                            src="/relode-logo.png"
+                            src="/relode-logo-white.png"
                             alt="Relode"
                             width={220}
                             height={60}
@@ -75,7 +75,7 @@ export default async function AdminPage() {
                     </nav>
                     <div className="mt-auto border-t border-slate-800 p-6">
                         <img
-                            src="/relode-logo.png"
+                            src="/relode-logo-white.png"
                             alt="Relode"
                             className="mx-auto h-10 w-auto opacity-80"
                         />
