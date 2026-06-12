@@ -47,9 +47,11 @@ export async function getCurrentCompany() {
     console.log('SETTINGS ERROR:', settingsError)
     console.log('COMPANY NAME:', company.company_name)
 
-    const logoUrl = Array.isArray(settings)
-        ? settings.find((s) => s.logo_url)?.logo_url
-        : settings?.logo_url
+    const settingsRecord = Array.isArray(settings)
+        ? settings.find((s: any) => s.logo_url)
+        : settings
+
+    const logoUrl = settingsRecord?.logo_url || null
 
     return {
         ...company,
