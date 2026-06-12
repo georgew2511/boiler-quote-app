@@ -34,13 +34,13 @@ export default async function PricingPage() {
 
 
     return (
-        <main className="min-h-screen bg-gray-50 p-8">
+        <main className="min-h-screen bg-[#f5f7fb] p-8">
             <div className="mx-auto max-w-7xl">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <a
                             href="/admin"
-                            className="rounded-xl border border-gray-300 px-5 py-3 font-medium text-gray-700 transition hover:bg-gray-100"
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                         >
                             ← Admin Panel
                         </a>
@@ -57,16 +57,16 @@ export default async function PricingPage() {
                     </div>
 
                     <form action={savePricing}>
-                        <button className="rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700">
+                        <button className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md">
                             Save Changes
                         </button>
                     </form>
                 </div>
 
-                <form action={savePricing} className="mt-8 rounded-2xl border bg-white p-6">
-                    <table className="w-full">
+                <form action={savePricing} className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <table className="w-full overflow-hidden rounded-2xl">
                         <thead>
-                            <tr className="border-b">
+                            <tr className="border-b border-slate-200">
                                 <th className="pb-4 text-left">Pricing Modifier</th>
                                 <th className="pb-4 text-left">Amount (£)</th>
                             </tr>
@@ -80,7 +80,7 @@ export default async function PricingPage() {
                                 </tr>
                             )}
                             {pricing?.map((item) => (
-                                <tr key={item.id} className="border-b last:border-0">
+                                <tr key={item.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50 last:border-0">
                                     <td className="py-4 font-medium">{item.name}</td>
                                     <td className="py-4">
                                         <input
@@ -92,7 +92,7 @@ export default async function PricingPage() {
                                             type="number"
                                             defaultValue={item.value}
                                             name={`value_${item.id}`}
-                                            className="w-40 rounded-lg border px-3 py-2"
+                                            className="w-40 rounded-2xl border border-slate-300 bg-white px-3 py-2 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                         />
                                     </td>
                                 </tr>
@@ -102,7 +102,7 @@ export default async function PricingPage() {
                     <div className="mt-6">
                         <button
                             type="submit"
-                            className="rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
+                            className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md"
                         >
                             Save Changes
                         </button>
@@ -110,7 +110,7 @@ export default async function PricingPage() {
                 </form>
 
 
-                <div className="mt-8 rounded-2xl border bg-white p-6">
+                <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                     <h2 className="text-2xl font-bold">Finance Settings</h2>
 
                     <div className="mt-6 grid gap-6 md:grid-cols-3">
@@ -119,7 +119,7 @@ export default async function PricingPage() {
                             <input
                                 type="number"
                                 defaultValue={500}
-                                className="w-full rounded-lg border px-3 py-2"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -129,7 +129,7 @@ export default async function PricingPage() {
                                 type="number"
                                 defaultValue={11.9}
                                 step="0.1"
-                                className="w-full rounded-lg border px-3 py-2"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -138,7 +138,7 @@ export default async function PricingPage() {
                             <input
                                 type="number"
                                 defaultValue={10}
-                                className="w-full rounded-lg border px-3 py-2"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-3 py-2 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
                     </div>

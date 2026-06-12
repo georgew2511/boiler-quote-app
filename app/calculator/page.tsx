@@ -29,6 +29,7 @@ const fallbackPricing = {
 function CalculatorContent() {
   const [step, setStep] = useState(0)
   const [loadingIndex, setLoadingIndex] = useState(0)
+  const [showLeadModal, setShowLeadModal] = useState(false)
   const searchParams = useSearchParams()
   const companyId = searchParams.get('company_id')
 
@@ -512,15 +513,29 @@ function CalculatorContent() {
     }, 4300)
 
     const moveOn = setTimeout(() => {
-      setStep(detailsStep)
+      setShowLeadModal(true)
+      setStep(recommendationsStep)
     }, 4800)
 
     return () => {
       clearTimeout(first)
       clearTimeout(second)
       clearTimeout(finish)
+      clearTimeout(moveOn)
     }
   }, [step])
+
+  useEffect(() => {
+    if (showLeadModal) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [showLeadModal])
   function validatePhone(phone: string) {
     const cleaned = phone.replace(/\s/g, '')
     return /^07\d{9}$/.test(cleaned)
@@ -584,8 +599,19 @@ function CalculatorContent() {
             stroke-dashoffset: 0;
           }
         }
+        @keyframes infinityFlow {
+          from {
+            stroke-dashoffset: 220;
+          }
+          to {
+            stroke-dashoffset: 0;
+          }
+        }
+        .animate-infinity {
+          animation: infinityFlow 2s linear infinite;
+        }
       `}</style>
-      <div className="w-full max-w-6xl bg-white rounded-2xl shadow p-8">
+      <div className="w-full max-w-6xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-[0_8px_30px_rgba(15,23,42,0.08)] backdrop-blur-sm">
 
         <div className="mb-8">
           <div className="h-2 bg-gray-200 rounded-full">
@@ -604,12 +630,12 @@ function CalculatorContent() {
               {visibleQuestions[step].title}
             </h1>
 
-            <div className="grid gap-3 mt-6 md:grid-cols-2">
+            <div className="grid gap-4 mt-6 md:grid-cols-2 justify-items-center">
               {visibleQuestions[step].options.map((option) => (
                 <button
                   key={option.label}
                   onClick={() => selectAnswer(option)}
-                  className="rounded-3xl border border-slate-200 bg-white p-4 md:p-6 text-center hover:border-green-500 transition min-h-[120px] md:min-h-[180px] lg:min-h-[220px] flex flex-col items-center justify-center"
+                  className="mx-auto w-full max-w-[420px] rounded-3xl border border-slate-200 bg-white p-4 md:p-6 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-green-500 hover:shadow-lg min-h-[120px] md:min-h-[180px] lg:min-h-[220px] flex flex-col items-center justify-center"
                 >
                   {'image' in option && option.image && (
                     <Image
@@ -640,238 +666,67 @@ function CalculatorContent() {
         {step === loadingStep && (
           <>
             <div className="py-12 text-center">
-              <h1 className="text-3xl font-bold">
-                Building your fixed price quote
-              </h1>
-
-              <p className="mt-4 text-gray-600">
-                Please wait while we prepare your quote
-              </p>
-
-              <div className="mt-10 flex justify-center">
-                <div className="relative h-32 w-32">
-                  <svg className="h-32 w-32 -rotate-90" viewBox="0 0 120 120">
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="54"
-                      stroke="#e5e7eb"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="54"
-                      stroke="#16a34a"
-                      strokeWidth="10"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeDasharray="339.3"
-                      strokeDashoffset="339.3"
-                      style={{
-                        animation: 'circleLoading 4.8s linear forwards',
-                      }}
-                    />
-                  </svg>
-
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-3xl">⚙️</div>
-                      <div className="mt-1 text-sm font-semibold text-gray-600">
-                        Calculating
-                      </div>
-                    </div>
-                  </div>
+              <div className="mb-10 flex items-center justify-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-lg font-bold text-white">
+                  R
                 </div>
-              </div>
-
-              <div className="mt-8 space-y-4 text-left max-w-md mx-auto">
-                <div
-                  className={`flex items-center gap-3 ${loadingIndex >= 0 ? 'text-green-600' : 'text-gray-400'
-                    }`}
-                >
-                  <span className="text-xl">
-                    {loadingIndex > 0 ? '✓' : '⟳'}
-                  </span>
-                  <span>Selecting the best boiler for you</span>
-                </div>
-
-                <div
-                  className={`flex items-center gap-3 ${loadingIndex >= 1 ? 'text-green-600' : 'text-gray-400'
-                    }`}
-                >
-                  <span className="text-xl">
-                    {loadingIndex > 1 ? '✓' : loadingIndex === 1 ? '⟳' : '○'}
-                  </span>
-                  <span>Making sure we've got the correct flue</span>
-                </div>
-
-                <div
-                  className={`flex items-center gap-3 ${loadingIndex >= 2 ? 'text-green-600' : 'text-gray-400'
-                    }`}
-                >
-                  <span className="text-xl">
-                    {loadingIndex === 2 ? '⟳' : '○'}
-                  </span>
-                  <span>Adding your installation essentials</span>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {step === detailsStep && (
-
-          <>
-            <div className="mb-8 border-l-8 border-lime-500 bg-[#f5f5f5] p-8">
-              <h1 className="text-3xl font-bold text-black">
-                Your quote is ready to view!
-              </h1>
-
-              <p className="mt-6 text-lg text-gray-700">
-                Enter your details below and view your quote instantly.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <input
-                className="w-full rounded-xl border p-4"
-                placeholder="Your name"
-                value={customer.name}
-                onChange={(e) => {
-                  const formattedName = e.target.value
-                    .toLowerCase()
-                    .replace(/\b\w/g, (char) => char.toUpperCase())
-
-                  setCustomer({
-                    ...customer,
-                    name: formattedName,
-                  })
-                }}
-              />
-
-              <input
-                className="w-full rounded-xl border p-4"
-                placeholder="Email address"
-                value={customer.email}
-                onChange={(e) =>
-                  setCustomer({
-                    ...customer,
-                    email: e.target.value,
-                  })
-                }
-              />
-
-              <input
-                className="w-full rounded-xl border p-4"
-                placeholder="Postcode"
-                value={(customer as any).postcode || ''}
-                onChange={(e) =>
-                  setCustomer({
-                    ...customer,
-                    postcode: e.target.value.toUpperCase().trim(),
-                  } as any)
-                }
-              />
-
-              <input
-                className={`w-full rounded-xl border p-4 ${phoneError ? 'border-red-500' : ''
-                  }`}
-                placeholder="Mobile number"
-                value={customer.phone}
-                onChange={(e) => {
-                  const phone = e.target.value
-
-                  setCustomer({
-                    ...customer,
-                    phone,
-                  })
-
-                  if (phone && !validatePhone(phone)) {
-                    setPhoneError('Please enter a valid UK mobile number')
-                  } else {
-                    setPhoneError('')
-                  }
-                }}
-              />
-
-              {phoneError && (
-                <p className="text-sm text-red-600">
-                  {phoneError}
-                </p>
-              )}
-
-              <div className="rounded-xl bg-green-50 p-4 text-lg text-green-800 flex items-center justify-center gap-3 text-center">
-                <span className="text-2xl">🔒</span>
-                <span>
-                  We only use your information to provide you with your free boiler quote.
+                <span className="font-semibold text-slate-700">
+                  Powered by Relode
                 </span>
               </div>
 
-              <button
-                onClick={async () => {
-                  if (typeof window !== 'undefined') {
-                    ; (window as any).dataLayer = (window as any).dataLayer || []
-                      ; (window as any).dataLayer.push({
-                        event: 'lead_submitted',
-                        postcode: (customer as any).postcode || '',
-                      })
-                  }
-                  const leadPayload = {
-                    company_id: companyId,
-                    name: customer.name,
-                    email: customer.email,
-                    phone: customer.phone,
-                    postcode: (customer as any).postcode || '',
-                    status: 'New Lead',
-                    answers,
-                    quote_price: 0,
-                    recommended_boilers: recommendedBoilers.map((boiler) => ({
-                      name: boiler.name,
-                      category: boiler.category,
-                      output: boiler.output,
-                      price: boiler.price,
-                      tier: boiler.tier,
-                    })),
-                  }
+              <h1 className="text-4xl font-bold text-slate-900">
+                Analysing your home
+              </h1>
 
-                  const { data, error } = await supabase
-                    .from('leads')
-                    .insert([leadPayload])
-                    .select()
-                    .single()
+              <p className="mt-4 text-lg text-slate-600">
+                Matching your property with suitable boilers, installation requirements and fixed pricing.
+              </p>
 
-                  if (error) {
-                    console.error('Lead save error:', error)
-                  } else {
-                    setLeadId(data.id)
-                  }
+              <div className="mt-10 flex justify-center">
+                <svg
+                  className="h-32 w-32 text-green-600"
+                  viewBox="0 0 100 50"
+                  fill="none"
+                >
+                  <path
+                    d="M10 25C20 5 30 5 50 25C70 45 80 45 90 25C80 5 70 5 50 25C30 45 20 45 10 25Z"
+                    stroke="currentColor"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray="220"
+                    strokeDashoffset="220"
+                    className="animate-infinity"
+                  />
+                </svg>
+              </div>
 
-                  if (typeof window !== 'undefined') {
-                    ; (window as any).dataLayer = (window as any).dataLayer || []
-                      ; (window as any).dataLayer.push({
-                        event: 'recommendations_viewed',
-                        boiler_count: recommendedBoilers.length,
-                      })
-                  }
+              <div className="mt-16 space-y-4 max-w-3xl mx-auto">
+                <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                  <span>Selecting suitable boilers</span>
+                  <span className="font-semibold text-green-600">
+                    {loadingIndex > 0 ? 'Complete' : 'Processing'}
+                  </span>
+                </div>
 
-                  setStep(recommendationsStep)
-                }}
-                disabled={
-                  !customer.name ||
-                  !customer.email ||
-                  !(customer as any).postcode ||
-                  !customer.phone ||
-                  !validatePhone(customer.phone)
-                }
-                className="w-full rounded-xl bg-green-600 p-4 font-semibold text-white disabled:opacity-30"
-              >
-                Show my fixed price
-              </button>
+                <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                  <span>Calculating installation requirements</span>
+                  <span className={`font-semibold ${loadingIndex > 1 ? 'text-green-600' : 'animate-pulse text-blue-600'}`}>
+                    {loadingIndex > 1 ? 'Complete' : 'Processing'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
+                  <span>Generating fixed pricing</span>
+                  <span className={`font-semibold ${loadingIndex > 2 ? 'text-green-600' : 'animate-pulse text-blue-600'}`}>
+                    {loadingIndex > 2 ? 'Complete' : 'Processing'}
+                  </span>
+                </div>
+              </div>
             </div>
           </>
         )}
+
         {step === recommendationsStep && (
           <>
             {/*
@@ -912,7 +767,7 @@ function CalculatorContent() {
               {recommendedBoilers.map((boiler) => (
                 <div
                   key={boiler.name}
-                  className={`rounded-xl border p-5 text-left transition ${boiler.tier === 'Better'
+                  className={`rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:shadow-xl ${boiler.tier === 'Better'
                     ? 'border-2 border-green-600 bg-green-50 shadow-lg'
                     : 'border-gray-300'
                     }`}
@@ -990,7 +845,7 @@ function CalculatorContent() {
                         </ul>
                       </div>
                     </div>
-                    <div className="w-full max-w-[320px] justify-self-center rounded-xl bg-gray-100 p-6">
+                    <div className="w-full max-w-[320px] justify-self-center rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
                       <p className="text-center font-semibold text-gray-700">
                         Your fixed price including installation
                       </p>
@@ -1441,7 +1296,7 @@ function CalculatorContent() {
                   This is your estimated installation price based on the information provided.
                 </p>
 
-                <div className="rounded-2xl bg-green-600 p-8 text-center text-white shadow-xl">
+                <div className="rounded-3xl bg-gradient-to-br from-green-600 to-emerald-500 p-8 text-center text-white shadow-[0_12px_40px_rgba(34,197,94,0.25)]">
                   <p className="text-sm uppercase tracking-wide text-white/80">
                     Guaranteed fixed price after photo check
                   </p>
@@ -1534,7 +1389,7 @@ function CalculatorContent() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-2xl border bg-white p-6 shadow-sm h-fit">
+              <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_8px_30px_rgba(15,23,42,0.08)] h-fit">
                 <div className="text-center">
                   <div className="text-4xl">⭐⭐⭐⭐⭐</div>
                   <h3 className="mt-3 text-xl font-bold">Rated Excellent</h3>
@@ -1587,6 +1442,120 @@ function CalculatorContent() {
         )}
       </div>
 
+      {showLeadModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-6">
+          <div className="w-full max-w-2xl rounded-[32px] border border-slate-200 bg-white p-10 shadow-[0_40px_100px_rgba(15,23,42,0.25)]">
+            <h2 className="text-4xl font-bold text-slate-900">
+              Your quote is ready
+            </h2>
+
+            <p className="mt-3 text-lg text-slate-600">
+              Enter your details to unlock your fixed boiler price.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                placeholder="Full Name"
+                value={customer.name}
+                onChange={(e) => {
+                  const formattedName = e.target.value
+                    .toLowerCase()
+                    .replace(/\b\w/g, (char) => char.toUpperCase())
+
+                  setCustomer({
+                    ...customer,
+                    name: formattedName,
+                  })
+                }}
+              />
+
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                placeholder="Email Address"
+                value={customer.email}
+                onChange={(e) =>
+                  setCustomer({ ...customer, email: e.target.value })
+                }
+              />
+
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                placeholder="Postcode"
+                value={(customer as any).postcode || ''}
+                onChange={(e) =>
+                  setCustomer({
+                    ...customer,
+                    postcode: e.target.value.toUpperCase().trim(),
+                  } as any)
+                }
+              />
+
+              <input
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                placeholder="Mobile Number"
+                value={customer.phone}
+                onChange={(e) => {
+                  const phone = e.target.value
+
+                  setCustomer({
+                    ...customer,
+                    phone,
+                  })
+
+                  if (phone && !validatePhone(phone)) {
+                    setPhoneError('Please enter a valid UK mobile number')
+                  } else {
+                    setPhoneError('')
+                  }
+                }}
+              />
+
+              {phoneError && (
+                <p className="mt-2 text-sm text-red-600">
+                  {phoneError}
+                </p>
+              )}
+
+              <button
+                onClick={async () => {
+                  const leadPayload = {
+                    company_id: companyId,
+                    name: customer.name,
+                    email: customer.email,
+                    phone: customer.phone,
+                    postcode: (customer as any).postcode || '',
+                    status: 'New Lead',
+                    answers,
+                  }
+
+                  const { data } = await supabase
+                    .from('leads')
+                    .insert([leadPayload])
+                    .select()
+                    .single()
+
+                  if (data) {
+                    setLeadId(data.id)
+                  }
+
+                  setShowLeadModal(false)
+                }}
+                disabled={
+                  !customer.name ||
+                  !customer.email ||
+                  !(customer as any).postcode ||
+                  !customer.phone ||
+                  !validatePhone(customer.phone)
+                }
+                className="w-full rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 py-6 text-xl font-semibold text-white shadow-xl disabled:opacity-30"
+              >
+                Show My Fixed Prices
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Boiler Details Modal */}
       {showBoilerDetails && detailsBoiler && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
@@ -1677,7 +1646,7 @@ function CalculatorContent() {
               </div>
             </div>
 
-            <div className="mt-10 rounded-2xl border p-8">
+            <div className="mt-10 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
               <h3 className="text-2xl font-bold">What's Included</h3>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -1694,7 +1663,7 @@ function CalculatorContent() {
               </div>
             </div>
 
-            <div className="mt-8 rounded-2xl border p-8">
+            <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
               <h3 className="text-2xl font-bold">Specifications</h3>
 
               <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -1737,7 +1706,7 @@ function CalculatorContent() {
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.12)]">
               <div className="flex items-center justify-between">
                 <h2 className="text-3xl font-bold">Finance Calculator</h2>
 

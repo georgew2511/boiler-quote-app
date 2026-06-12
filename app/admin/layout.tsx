@@ -9,7 +9,7 @@ export default async function AdminLayout({
     const company = await getCurrentCompany()
 
     return (
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen bg-[#f5f7fb]">
             <aside className="flex w-72 flex-col bg-slate-950 text-white">
                 <div className="border-b border-slate-800 p-8">
                     {company.logo_url ? (
@@ -82,8 +82,10 @@ export default async function AdminLayout({
                 </div>
             </aside>
 
-            <section className="flex-1">
-                {children}
+            <section className="flex-1 bg-[#f5f7fb]">
+                <div className="min-h-screen p-6">
+                    {children}
+                </div>
             </section>
         </div>
     )

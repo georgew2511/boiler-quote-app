@@ -30,7 +30,7 @@ export default async function AdminPage() {
 
                     <Link
                         href="/logout"
-                        className="rounded-xl bg-red-600 px-5 py-3 font-medium text-white hover:bg-red-700"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                     >
                         Log Out
                     </Link>

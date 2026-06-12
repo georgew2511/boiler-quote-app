@@ -217,7 +217,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                     <div className="mt-4 flex items-center justify-end gap-4 md:col-span-2">
                         <button
                             type="submit"
-                            className="rounded-2xl bg-green-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition hover:bg-green-700"
+                            className="rounded-2xl border border-emerald-700 bg-emerald-700 px-8 py-4 text-lg font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md"
                         >
                             Save Boiler
                         </button>

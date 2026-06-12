@@ -16,6 +16,49 @@ export default async function LeadsPage() {
     console.log('LEADS:', leads)
     console.log('LEADS ERROR:', error)
 
+    const getLeadValue = (lead: any) => {
+        const raw = lead.raw_data || lead.answers || {}
+
+        // Check boiler recommendations first
+        if (Array.isArray(lead.recommended_boilers) && lead.recommended_boilers.length > 0) {
+            const prices = lead.recommended_boilers
+                .map((b: any) => Number(b.price || 0))
+                .filter((p: number) => p > 0)
+
+            if (prices.length > 0) {
+                return Math.max(...prices)
+            }
+        }
+
+        // Check common calculator fields
+        const prices = [
+            raw.worcesterPrice,
+            raw.worcester_price,
+            raw.idealPrice,
+            raw.ideal_price,
+            raw.glowWormPrice,
+            raw.glow_worm_price,
+            raw.vaillantPrice,
+            raw.vaillant_price,
+            lead.quote_price,
+        ]
+            .map((p: any) => Number(p || 0))
+            .filter((p: number) => p > 0)
+
+        if (prices.length > 0) {
+            return Math.max(...prices)
+        }
+
+        // Fallback: attempt to parse prices from notes text
+        const notes = String(lead.notes || lead.note || '')
+
+        const matches = [...notes.matchAll(/(\d+(?:\.\d+)?)/g)]
+            .map(m => Number(m[1]))
+            .filter(n => n > 1000)
+
+        return matches.length > 0 ? Math.max(...matches) : 0
+    }
+
     async function deleteLead(id: number) {
         'use server'
 
@@ -34,7 +77,7 @@ export default async function LeadsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-[#f5f7fb]">
             <main className="p-8">
                 <div className="mx-auto max-w-7xl">
                     <div className="flex items-center justify-between">
@@ -46,13 +89,41 @@ export default async function LeadsPage() {
                         </div>
                         <a
                             href="/admin"
-                            className="rounded-lg border bg-white px-4 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                            className="rounded-xl border border-slate-200 bg-white px-5 py-2 font-medium text-slate-700 shadow-sm hover:bg-slate-50"
                         >
                             ← Back to Admin
                         </a>
                     </div>
 
-                    <div className="mt-8 rounded-2xl border bg-white p-6">
+                    <div className="mt-8 grid gap-4 md:grid-cols-4">
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Total Leads</p>
+                            <p className="mt-2 text-3xl font-bold">{leads?.length || 0}</p>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">New Leads</p>
+                            <p className="mt-2 text-3xl font-bold text-green-600">
+                                {leads?.filter(l => !l.status || l.status === 'New Lead').length || 0}
+                            </p>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Quoted</p>
+                            <p className="mt-2 text-3xl font-bold text-blue-600">
+                                {leads?.filter(l => l.status === 'Quoted').length || 0}
+                            </p>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Total Quote Value</p>
+                            <p className="mt-2 text-3xl font-bold text-purple-600">
+                                £{(leads || []).reduce((sum, lead) => sum + getLeadValue(lead), 0).toLocaleString()}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <div className="grid gap-4 md:grid-cols-4">
                             <input
                                 type="text"
@@ -86,7 +157,7 @@ export default async function LeadsPage() {
                                 </tr>
                             </thead>
 
-                            <tbody>
+                            <tbody className="divide-y divide-slate-200">
                                 {(!leads || leads.length === 0) && (
                                     <tr>
                                         <td colSpan={9} className="px-5 py-4 text-center text-gray-500">
@@ -147,11 +218,11 @@ export default async function LeadsPage() {
                                         const deleteLeadWithId = deleteLead.bind(null, lead.id)
 
                                         return (
-                                            <tr key={lead.id} className="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                                            <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
                                                 <td className="px-5 py-4">
                                                     <a
                                                         href={`/admin/leads/${lead.id}`}
-                                                        className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                                                        className="font-semibold text-slate-900 hover:text-blue-600"
                                                     >
                                                         {lead.name || `${lead.first_name ?? ''} ${lead.last_name ?? ''}`.trim()}
                                                     </a>
@@ -183,23 +254,26 @@ export default async function LeadsPage() {
                                                     {lead.boiler_name || 'Not selected'}
                                                 </td>
                                                 <td className="px-5 py-4 font-semibold">
-                                                    £{Number(lead.quote_price || 0).toLocaleString()}
+                                                    £{getLeadValue(lead).toLocaleString()}
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                                         {lead.status || 'New Lead'}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-4 text-right">
                                                     <div className="flex justify-end gap-2">
-                                                        <button className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700">
-                                                            Contact
-                                                        </button>
+                                                        <a
+                                                            href={`/admin/leads/${lead.id}`}
+                                                            className="inline-flex items-center justify-center rounded-xl bg-slate-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-slate-900 hover:shadow-md"
+                                                        >
+                                                            View
+                                                        </a>
 
                                                         <form action={deleteLeadWithId}>
                                                             <button
                                                                 type="submit"
-                                                                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
+                                                                className="inline-flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-100"
                                                             >
                                                                 Delete
                                                             </button>

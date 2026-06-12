@@ -160,12 +160,12 @@ export default function SettingsPage() {
     }, [])
 
     return (
-        <main className="min-h-screen bg-gray-50 p-8">
+        <main className="min-h-screen bg-[#f5f7fb] p-8">
             <div className="mx-auto max-w-7xl">
                 <div className="flex items-center gap-4">
                     <a
                         href="/admin"
-                        className="rounded-xl border border-gray-300 px-5 py-3 font-medium text-gray-700 transition hover:bg-gray-100"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                     >
                         ← Admin Panel
                     </a>
@@ -179,7 +179,28 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="mt-8 grid gap-8">
-                    <div className="rounded-2xl border bg-white p-6">
+                    <div className="grid gap-4 md:grid-cols-4">
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Company</p>
+                            <p className="mt-2 text-xl font-bold">{settings.company_name || 'Not Set'}</p>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Quote Validity</p>
+                            <p className="mt-2 text-xl font-bold">{settings.quote_validity_days} Days</p>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Workmanship Warranty</p>
+                            <p className="mt-2 text-xl font-bold">{settings.workmanship_warranty_months} Months</p>
+                        </div>
+
+                        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                            <p className="text-sm text-slate-500">Minimum Deposit</p>
+                            <p className="mt-2 text-xl font-bold">£{settings.minimum_deposit}</p>
+                        </div>
+                    </div>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Company Branding</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -189,7 +210,7 @@ export default function SettingsPage() {
                                     type="text"
                                     value={settings.company_name}
                                     onChange={(e) => setSettings({ ...settings, company_name: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -208,16 +229,16 @@ export default function SettingsPage() {
                                     <input
                                         type="text"
                                         placeholder="https://..."
-                                        value={settings.logo_url}
+                                        value={settings.logo_url || ''}
                                         onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
-                                        className="flex-1 rounded-lg border px-4 py-3"
+                                        className="flex-1 rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                     />
 
                                     <button
                                         type="button"
                                         disabled={uploadingLogo}
                                         onClick={() => logoInputRef.current?.click()}
-                                        className="rounded-lg border bg-gray-100 px-4 py-3 font-medium hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {uploadingLogo ? 'Uploading...' : 'Upload Logo'}
                                     </button>
@@ -241,7 +262,7 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border bg-white p-6">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Company Contact Details</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -251,7 +272,7 @@ export default function SettingsPage() {
                                     type="text"
                                     value={settings.phone_number}
                                     onChange={(e) => setSettings({ ...settings, phone_number: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -261,7 +282,7 @@ export default function SettingsPage() {
                                     type="email"
                                     value={settings.email_address}
                                     onChange={(e) => setSettings({ ...settings, email_address: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -271,13 +292,13 @@ export default function SettingsPage() {
                                     type="text"
                                     value={settings.website}
                                     onChange={(e) => setSettings({ ...settings, website: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border bg-white p-6">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Email Settings</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -287,7 +308,7 @@ export default function SettingsPage() {
                                     type="email"
                                     value={settings.from_email}
                                     onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -297,13 +318,13 @@ export default function SettingsPage() {
                                     type="email"
                                     value={settings.lead_notification_email}
                                     onChange={(e) => setSettings({ ...settings, lead_notification_email: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border bg-white p-6">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Tracking & Analytics</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -314,7 +335,7 @@ export default function SettingsPage() {
                                     value={settings.gtm_id}
                                     onChange={(e) => setSettings({ ...settings, gtm_id: e.target.value })}
                                     placeholder="GTM-XXXXXXX"
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                                 <p className="mt-2 text-sm text-gray-500 whitespace-pre-line">
                                     {`Used to load Google Tag Manager and track conversions throughout the quote journey.
@@ -347,7 +368,7 @@ These events are automatically pushed by the quote calculator and can be connect
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border bg-white p-6">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Finance Settings</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-4">
@@ -357,7 +378,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     type="number"
                                     value={settings.minimum_deposit}
                                     onChange={(e) => setSettings({ ...settings, minimum_deposit: Number(e.target.value) })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -368,7 +389,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     step="0.1"
                                     value={settings.apr}
                                     onChange={(e) => setSettings({ ...settings, apr: Number(e.target.value) })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -378,7 +399,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     type="number"
                                     value={settings.zero_percent_term_1}
                                     onChange={(e) => setSettings({ ...settings, zero_percent_term_1: Number(e.target.value) })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -388,7 +409,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     type="number"
                                     value={settings.zero_percent_term_2}
                                     onChange={(e) => setSettings({ ...settings, zero_percent_term_2: Number(e.target.value) })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
                         </div>
@@ -404,7 +425,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     type="number"
                                     value={settings.quote_validity_days}
                                     onChange={(e) => setSettings({ ...settings, quote_validity_days: Number(e.target.value) })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -414,7 +435,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     type="number"
                                     value={settings.workmanship_warranty_months}
                                     onChange={(e) => setSettings({ ...settings, workmanship_warranty_months: Number(e.target.value) })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -424,7 +445,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     type="text"
                                     value={settings.google_reviews_url}
                                     onChange={(e) => setSettings({ ...settings, google_reviews_url: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -435,7 +456,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     placeholder="https://trustpilot.com/..."
                                     value={settings.trustpilot_url}
                                     onChange={(e) => setSettings({ ...settings, trustpilot_url: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
 
@@ -515,7 +536,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                     alert('Failed to save settings')
                                 }
                             }}
-                            className="rounded-xl bg-green-600 px-8 py-4 font-semibold text-white hover:bg-green-700"
+                            className="rounded-xl border border-emerald-700 bg-emerald-700 px-8 py-4 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md"
                         >
                             Save Company Settings
                         </button>

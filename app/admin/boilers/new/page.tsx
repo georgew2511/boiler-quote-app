@@ -51,14 +51,14 @@ export default function NewBoilerPage() {
     }
 
     return (
-        <main className="min-h-screen bg-gray-50 p-8">
+        <main className="min-h-screen bg-[#f5f7fb] p-8">
             <div className="mx-auto max-w-4xl">
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-4xl font-bold">Add Boiler</h1>
 
                     <Link
                         href="/admin/boilers"
-                        className="rounded-lg border px-4 py-2"
+                        className="rounded-xl border border-slate-200 bg-white px-5 py-2 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                     >
                         Back
                     </Link>
@@ -67,7 +67,7 @@ export default function NewBoilerPage() {
                 <form
                     action={createBoiler}
                     encType="multipart/form-data"
-                    className="rounded-2xl border bg-white p-8"
+                    className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
                 >
                     <div className="grid gap-6 md:grid-cols-2">
                         <div>
@@ -76,7 +76,7 @@ export default function NewBoilerPage() {
                                 name="name"
                                 type="text"
                                 required
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -85,7 +85,7 @@ export default function NewBoilerPage() {
                             <select
                                 name="tier"
                                 required
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             >
                                 <option value="Good">Good</option>
                                 <option value="Better">Better</option>
@@ -98,7 +98,7 @@ export default function NewBoilerPage() {
                             <select
                                 name="category"
                                 defaultValue="combi"
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             >
                                 <option value="combi">Combi</option>
                                 <option value="system">System</option>
@@ -113,7 +113,7 @@ export default function NewBoilerPage() {
                                 type="number"
                                 required
                                 placeholder="25, 30, 36"
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -123,7 +123,7 @@ export default function NewBoilerPage() {
                                 name="price"
                                 type="number"
                                 required
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -133,7 +133,7 @@ export default function NewBoilerPage() {
                                 name="image"
                                 type="file"
                                 accept="image/*"
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                             <p className="mt-2 text-sm text-gray-500">
                                 Upload a boiler image. It will be stored in Supabase Storage and displayed on the quote calculator.
@@ -146,7 +146,7 @@ export default function NewBoilerPage() {
                                 name="warranty"
                                 type="number"
                                 defaultValue={10}
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>
 
@@ -155,7 +155,7 @@ export default function NewBoilerPage() {
                             <select
                                 name="status"
                                 defaultValue="Active"
-                                className="w-full rounded-lg border px-4 py-3"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             >
                                 <option value="Active">Active</option>
                                 <option value="Inactive">Inactive</option>
@@ -166,14 +166,14 @@ export default function NewBoilerPage() {
                     <div className="mt-8 flex justify-end gap-3">
                         <Link
                             href="/admin/boilers"
-                            className="rounded-lg border px-6 py-3"
+                            className="rounded-xl border border-slate-200 bg-white px-6 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                         >
                             Cancel
                         </Link>
 
                         <button
                             type="submit"
-                            className="rounded-lg bg-green-600 px-6 py-3 font-semibold text-white"
+                            className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md"
                         >
                             Create Boiler
                         </button>

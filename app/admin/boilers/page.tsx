@@ -79,7 +79,7 @@ export default async function BoilersPage() {
                     <div className="flex items-center gap-4">
                         <Link
                             href="/admin"
-                            className="rounded-xl border border-gray-300 px-5 py-3 font-medium text-gray-700 transition hover:bg-gray-100"
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
                         >
                             ← Admin Panel
                         </Link>
@@ -90,7 +90,7 @@ export default async function BoilersPage() {
                     </div>
                     <Link
                         href="/admin/boilers/new"
-                        className="rounded-xl bg-green-600 px-6 py-4 font-semibold text-white shadow-sm transition hover:bg-green-700"
+                        className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-4 font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md"
                     >
                         Add Boiler
                     </Link>
@@ -131,7 +131,7 @@ export default async function BoilersPage() {
                                             <td className="px-6 py-5">
                                                 <Link
                                                     href={`/admin/boilers/${boiler.id}`}
-                                                    className="font-semibold text-blue-600 hover:underline"
+                                                    className="font-semibold text-slate-900 transition-colors hover:text-blue-600"
                                                 >
                                                     {boiler.name}
                                                 </Link>
@@ -159,14 +159,14 @@ export default async function BoilersPage() {
                                                 <div className="flex flex-wrap gap-2">
                                                     <form action={duplicateBoiler}>
                                                         <input type="hidden" name="id" value={boiler.id} />
-                                                        <button type="submit" className="inline-flex h-10 min-w-[90px] items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
+                                                        <button type="submit" className="inline-flex h-10 min-w-[90px] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md">
                                                             Duplicate
                                                         </button>
                                                     </form>
 
                                                     <form action={deleteBoiler}>
                                                         <input type="hidden" name="id" value={boiler.id} />
-                                                        <button type="submit" className="inline-flex h-10 min-w-[90px] items-center justify-center rounded-lg bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-700">
+                                                        <button type="submit" className="inline-flex h-10 min-w-[90px] items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-600 transition-all hover:bg-red-100">
                                                             Delete
                                                         </button>
                                                     </form>
