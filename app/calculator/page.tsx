@@ -609,7 +609,24 @@ function CalculatorContent() {
                 <button
                   key={option.label}
                   onClick={() => selectAnswer(option)}
-                  className="rounded-xl border border-gray-300 p-5 text-center hover:border-green-500 min-h-[140px] flex flex-col items-center justify-center"
+                  className="
+rounded-3xl
+border
+border-slate-200
+bg-white
+p-5
+md:p-8
+text-center
+hover:border-green-500
+transition
+min-h-[160px]
+md:min-h-[220px]
+lg:min-h-[260px]
+flex
+flex-col
+items-center
+justify-center
+"
                 >
                   {'image' in option && option.image && (
                     <Image
@@ -617,10 +634,18 @@ function CalculatorContent() {
                       alt={option.label}
                       width={120}
                       height={120}
-                      className="mx-auto mb-4"
+                      className="
+    mx-auto
+    mb-4
+    h-[70px]
+    w-auto
+    object-contain
+    md:h-[120px]
+    lg:h-[140px]
+  "
                     />
                   )}
-                  <div className="font-semibold">
+                  <div className="text-lg font-semibold md:text-xl">
                     {option.label}
                   </div>
                 </button>
