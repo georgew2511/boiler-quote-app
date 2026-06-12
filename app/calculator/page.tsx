@@ -604,7 +604,7 @@ function CalculatorContent() {
               {visibleQuestions[step].title}
             </h1>
 
-            <div className="grid gap-4 mt-8 md:grid-cols-2">
+            <div className="grid gap-3 mt-6 md:grid-cols-2">
               {visibleQuestions[step].options.map((option) => (
                 <button
                   key={option.label}
@@ -614,14 +614,14 @@ rounded-3xl
 border
 border-slate-200
 bg-white
-p-5
-md:p-8
+p-4
+md:p-6
 text-center
 hover:border-green-500
 transition
-min-h-[160px]
-md:min-h-[220px]
-lg:min-h-[260px]
+min-h-[120px]
+md:min-h-[180px]
+lg:min-h-[220px]
 flex
 flex-col
 items-center
@@ -637,15 +637,15 @@ justify-center
                       className="
     mx-auto
     mb-4
-    h-[70px]
+    h-[50px]
     w-auto
     object-contain
-    md:h-[120px]
-    lg:h-[140px]
+    md:h-[90px]
+    lg:h-[110px]
   "
                     />
                   )}
-                  <div className="text-lg font-semibold md:text-xl">
+                  <div className="text-base font-semibold md:text-lg">
                     {option.label}
                   </div>
                 </button>
