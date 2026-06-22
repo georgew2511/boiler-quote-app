@@ -23,6 +23,7 @@ export default function SettingsPage() {
         lead_notification_email: '',
         gtm_id: '',
         ga4_id: '',
+        vat_registered: false,
         minimum_deposit: 500,
         apr: 11.9,
         zero_percent_term_1: 12,
@@ -366,6 +367,33 @@ These events are automatically pushed by the quote calculator and can be connect
                                 </p>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <h2 className="text-2xl font-bold">VAT</h2>
+                        <p className="mt-2 text-sm text-slate-500">
+                            If your business is VAT registered, 20% VAT is automatically added to every price your customers see on the quote calculator. If you're not VAT registered, leave this off and customers will see your price as entered, with no VAT added.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => setSettings({ ...settings, vat_registered: !settings.vat_registered })}
+                            className={`mt-4 inline-flex items-center rounded-full py-2 pl-2.5 pr-3.5 text-sm font-medium transition-colors ${settings.vat_registered ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                                }`}
+                        >
+                            <span
+                                className={`relative inline-block h-5 w-9 shrink-0 rounded-full transition-colors ${settings.vat_registered ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}
+                            >
+                                <span
+                                    className={`absolute top-[2px] h-4 w-4 rounded-full bg-white shadow transition-all ${settings.vat_registered ? 'left-[18px]' : 'left-[2px]'
+                                        }`}
+                                />
+                            </span>
+                            <span className="ml-2.5">
+                                {settings.vat_registered ? 'VAT Registered (adding 20% to quotes)' : 'Not VAT Registered (no VAT added)'}
+                            </span>
+                        </button>
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

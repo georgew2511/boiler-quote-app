@@ -27,6 +27,7 @@ export async function GET(request: Request) {
                 lead_notification_email,
                 gtm_id,
                 ga4_id,
+                vat_registered,
                 minimum_deposit,
                 apr,
                 zero_percent_term_1,

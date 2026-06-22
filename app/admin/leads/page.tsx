@@ -257,7 +257,12 @@ export default async function LeadsPage() {
                                                     £{getLeadValue(lead).toLocaleString()}
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                                    <span
+                                                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${lead.status === 'Test'
+                                                            ? 'bg-amber-100 text-amber-700'
+                                                            : 'bg-slate-100 text-slate-700'
+                                                            }`}
+                                                    >
                                                         {lead.status || 'New Lead'}
                                                     </span>
                                                 </td>

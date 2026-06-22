@@ -59,6 +59,25 @@ export default async function AdminLayout({
                     </Link>
 
                     <Link
+                        href="/admin/service-plans"
+                        className="flex items-center justify-between rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                    >
+                        Service Plans
+                        {!company.service_plans_addon && (
+                            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">
+                                Add-on
+                            </span>
+                        )}
+                    </Link>
+
+                    <Link
+                        href="/admin/test-quote"
+                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                    >
+                        Test Quote
+                    </Link>
+
+                    <Link
                         href="/admin/embed-code"
                         className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
                     >
@@ -71,6 +90,15 @@ export default async function AdminLayout({
                     >
                         Settings
                     </Link>
+
+                    {company.isSuperAdmin && (
+                        <Link
+                            href="/admin/companies"
+                            className="block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-amber-300 transition hover:bg-amber-500/20"
+                        >
+                            All Companies
+                        </Link>
+                    )}
                 </nav>
 
                 <div className="mt-auto border-t border-slate-800 p-6">
@@ -83,6 +111,14 @@ export default async function AdminLayout({
             </aside>
 
             <section className="flex-1 bg-[#f5f7fb]">
+                {company.isImpersonating && (
+                    <div className="flex items-center justify-between bg-amber-500 px-6 py-3 text-sm font-medium text-amber-950">
+                        <span>Viewing as {company.company_name} (logged in as platform admin)</span>
+                        <Link href="/admin/companies" className="underline">
+                            Switch company
+                        </Link>
+                    </div>
+                )}
                 <div className="min-h-screen p-6">
                     {children}
                 </div>

@@ -1,12 +1,9 @@
-import { supabase } from '@/lib/supabase'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
 export default async function EmbedPage() {
-    const { data: company } = await supabase
-        .from('companies')
-        .select('id, company_name')
-        .single()
+    const company = await getCurrentCompany()
 
-    const embedCode = `<iframe src="https://portal.relode.io/calculator?company_id=${company?.id}" width="100%" height="1200" frameborder="0"></iframe>`
+    const embedCode = `<iframe src="https://portal.relode.io/calculator?company_id=${company.id}" width="100%" height="1200" frameborder="0"></iframe>`
 
     return (
         <main className="min-h-screen bg-slate-100 p-8">
@@ -23,7 +20,7 @@ export default async function EmbedPage() {
                 <div className="mt-8 rounded-2xl bg-white p-6 shadow">
                     <div className="mb-4">
                         <h2 className="text-xl font-semibold">
-                            {company?.company_name} Embed Code
+                            {company.company_name} Embed Code
                         </h2>
                     </div>
 

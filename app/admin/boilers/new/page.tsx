@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -6,19 +7,21 @@ export default function NewBoilerPage() {
     async function createBoiler(formData: FormData) {
         'use server'
 
+        const company = await getCurrentCompany()
+
         const imageFile = formData.get('image') as File
 
         let imageUrl = ''
 
         if (imageFile && imageFile.size > 0) {
-            const fileName = `${Date.now()}-${imageFile.name}`
+            const fileName = `boilers/${Date.now()}-${imageFile.name}`
 
             const { error: uploadError } = await supabase.storage
                 .from('boiler-images')
                 .upload(fileName, imageFile)
 
             if (uploadError) {
-                throw new Error(JSON.stringify(uploadError))
+                throw new Error(`Image upload failed: ${uploadError.message}`)
             }
 
             const {
@@ -34,6 +37,7 @@ export default function NewBoilerPage() {
             .from('boilers')
             .insert({
                 name: formData.get('name'),
+                manufacturer: formData.get('manufacturer'),
                 tier: formData.get('tier'),
                 category: formData.get('category'),
                 price: Number(formData.get('price')),
@@ -41,6 +45,7 @@ export default function NewBoilerPage() {
                 image: imageUrl,
                 warranty: Number(formData.get('warranty')),
                 status: formData.get('status'),
+                company_id: company.id,
             })
 
         if (error) {
@@ -76,6 +81,17 @@ export default function NewBoilerPage() {
                                 name="name"
                                 type="text"
                                 required
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-2 block font-medium">Manufacturer</label>
+                            <input
+                                name="manufacturer"
+                                type="text"
+                                required
+                                placeholder="Worcester Bosch, Vaillant, Ideal..."
                                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
                         </div>

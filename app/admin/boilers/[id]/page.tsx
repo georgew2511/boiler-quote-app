@@ -1,10 +1,12 @@
 import { supabase } from '@/lib/supabase'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 export default async function EditBoilerPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: routeId } = await params
     const id = Number(routeId)
+    const company = await getCurrentCompany()
 
     console.log('Editing boiler id:', id)
 
@@ -12,6 +14,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
         .from('boilers')
         .select('*')
         .eq('id', id)
+        .eq('company_id', company.id)
         .single()
 
     if (error) {
@@ -40,7 +43,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
     async function updateBoiler(formData: FormData) {
         'use server'
         const updates: Record<string, any> = {}
-        const fields = ['name', 'tier', 'category', 'output', 'price', 'warranty', 'status']
+        const fields = ['name', 'manufacturer', 'tier', 'category', 'output', 'price', 'warranty', 'status']
         for (const field of fields) {
             const value = formData.get(field)
             if (typeof value === 'string') {
@@ -54,22 +57,37 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
             const fileName = `boilers/${Date.now()}.${fileExt}`
 
             const { error: uploadError } = await supabase.storage
-                .from('customer-uploads')
+                .from('boiler-images')
                 .upload(fileName, imageFile, {
                     upsert: true,
                 })
 
-            if (!uploadError) {
-                const {
-                    data: { publicUrl },
-                } = supabase.storage
-                    .from('customer-uploads')
-                    .getPublicUrl(fileName)
-
-                updates.image = publicUrl
+            if (uploadError) {
+                throw new Error(`Image upload failed: ${uploadError.message}`)
             }
+
+            const {
+                data: { publicUrl },
+            } = supabase.storage
+                .from('boiler-images')
+                .getPublicUrl(fileName)
+
+            updates.image = publicUrl
         }
-        await supabase.from('boilers').update(updates).eq('id', id)
+        await supabase.from('boilers').update(updates).eq('id', id).eq('company_id', company.id)
+        redirect('/admin/boilers')
+    }
+
+    async function duplicateBoiler() {
+        'use server'
+
+        const { id: _id, created_at, ...boilerData } = boiler
+
+        await supabase.from('boilers').insert({
+            ...boilerData,
+            name: `${boiler.name} (Copy)`,
+        })
+
         redirect('/admin/boilers')
     }
 
@@ -97,6 +115,18 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                             name="name"
                             type="text"
                             defaultValue={boiler.name || ''}
+                            required
+                            className="w-full rounded-2xl border border-gray-300 px-4 py-4 text-lg transition focus:border-green-500 focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-600" htmlFor="manufacturer">Manufacturer</label>
+                        <input
+                            id="manufacturer"
+                            name="manufacturer"
+                            type="text"
+                            defaultValue={boiler.manufacturer || ''}
+                            placeholder="Worcester Bosch, Vaillant, Ideal..."
                             required
                             className="w-full rounded-2xl border border-gray-300 px-4 py-4 text-lg transition focus:border-green-500 focus:outline-none"
                         />
@@ -154,6 +184,13 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                             required
                             className="w-full rounded-2xl border border-gray-300 px-4 py-4 text-lg transition focus:border-green-500 focus:outline-none"
                         />
+                        <p className="mt-2 text-sm text-gray-500">
+                            Updating prices for several boilers at once? Use{' '}
+                            <Link href="/admin/pricing?tab=boilers" className="text-blue-600 hover:underline">
+                                Pricing → Boiler Prices
+                            </Link>
+                            .
+                        </p>
                     </div>
                     <div>
                         <label className="mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-600" htmlFor="warranty">Warranty (Years)</label>
@@ -222,6 +259,15 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                             Save Boiler
                         </button>
                     </div>
+                </form>
+
+                <form action={duplicateBoiler} className="mt-4 flex justify-end">
+                    <button
+                        type="submit"
+                        className="rounded-2xl border border-slate-300 px-8 py-4 text-lg font-medium text-slate-700 transition hover:bg-gray-50"
+                    >
+                        Duplicate Boiler
+                    </button>
                 </form>
             </div>
         </main>

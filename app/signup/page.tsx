@@ -5,6 +5,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase'
 
+// The account whose boilers get copied into every new company on signup,
+// so new users land with a working catalogue instead of an empty one.
+const TEMPLATE_COMPANY_ID = '6578dad8-9e8a-4189-abf7-d578bda4af47'
+
 export default function SignupPage() {
     const [companyName, setCompanyName] = useState('')
     const [name, setName] = useState('')
@@ -65,7 +69,7 @@ export default function SignupPage() {
 
             const { data: defaultPricing, error: pricingReadError } = await supabaseBrowser
                 .from('pricing')
-                .select('name, value')
+                .select('name, value, key, category')
                 .is('company_id', null)
 
             if (pricingReadError) {
@@ -78,6 +82,8 @@ export default function SignupPage() {
                 const pricingRows = defaultPricing.map((row) => ({
                     name: row.name,
                     value: row.value,
+                    key: row.key,
+                    category: row.category,
                     company_id: company.id,
                 }))
 
@@ -87,6 +93,34 @@ export default function SignupPage() {
 
                 if (pricingInsertError) {
                     alert(`Failed to create company pricing: ${pricingInsertError.message}`)
+                    setLoading(false)
+                    return
+                }
+            }
+
+            const { data: templateBoilers, error: boilersReadError } = await supabaseBrowser
+                .from('boilers')
+                .select('name, tier, category, output, price, warranty, status, image')
+                .eq('company_id', TEMPLATE_COMPANY_ID)
+
+            if (boilersReadError) {
+                alert(`Failed to load default boilers: ${boilersReadError.message}`)
+                setLoading(false)
+                return
+            }
+
+            if (templateBoilers && templateBoilers.length > 0) {
+                const boilerRows = templateBoilers.map((boiler) => ({
+                    ...boiler,
+                    company_id: company.id,
+                }))
+
+                const { error: boilersInsertError } = await supabaseBrowser
+                    .from('boilers')
+                    .insert(boilerRows)
+
+                if (boilersInsertError) {
+                    alert(`Failed to create default boilers: ${boilersInsertError.message}`)
                     setLoading(false)
                     return
                 }

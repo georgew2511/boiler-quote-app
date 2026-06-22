@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
+import { PRICING_DEFINITIONS } from '@/lib/pricingKeys'
 
 const fallbackPricing = {
   lpg: 500,
@@ -13,9 +14,10 @@ const fallbackPricing = {
   backBoiler: 1200,
   convertToCombi: 1500,
   wallMountedNo: 250,
-  oldBoilerSurcharge: 50,
+  condensateNeeded: 50,
   relocate: 750,
   roofFlue: 300,
+  horizontalFlue: 90,
   wallDistance1to2: 100,
   wallDistance2to3: 200,
   wallDistance3plus: 250,
@@ -32,10 +34,15 @@ function CalculatorContent() {
   const [showLeadModal, setShowLeadModal] = useState(false)
   const searchParams = useSearchParams()
   const companyId = searchParams.get('company_id')
+  // Set by the admin "Test Quote" page so companies can try the live
+  // calculator before embedding it anywhere, without it looking like a real
+  // customer enquiry in their Leads list.
+  const isPreviewMode = searchParams.get('preview') === '1'
 
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [boilers, setBoilers] = useState<any[]>([])
   const [pricingData, setPricingData] = useState(fallbackPricing)
+  const [vatRegistered, setVatRegistered] = useState(false)
 
   const questions = [
     {
@@ -88,8 +95,8 @@ function CalculatorContent() {
       key: 'age',
       options: [
         { label: 'Up to 10 years', image: '/up-to-ten.svg', modifier: 0 },
-        { label: 'Over 10 years', image: '/ten-twenty.svg', modifier: pricingData.oldBoilerSurcharge },
-        { label: "I'm not sure", image: '/question-mark.svg', modifier: pricingData.oldBoilerSurcharge },
+        { label: 'Over 10 years', image: '/ten-twenty.svg', modifier: pricingData.condensateNeeded },
+        { label: "I'm not sure", image: '/question-mark.svg', modifier: pricingData.condensateNeeded },
       ],
     },
     {
@@ -147,14 +154,14 @@ function CalculatorContent() {
       key: 'flueType',
       options: [
         { label: 'Roof', image: '/roof.svg', modifier: pricingData.roofFlue },
-        { label: 'Wall', image: '/wall.svg', modifier: 0 },
+        { label: 'Horizontal', image: '/wall.svg', modifier: pricingData.horizontalFlue },
       ],
     },
     {
       title: 'How far is your current boiler from an outside wall ?',
       key: 'wallDistance',
       showIf: (answers: any) =>
-        answers.flueType?.label === 'Wall',
+        answers.flueType?.label === 'Horizontal',
       options: [
         { label: 'Under 1 metre', modifier: 0 },
         { label: '1 - 2 metres', modifier: pricingData.wallDistance1to2 },
@@ -166,7 +173,7 @@ function CalculatorContent() {
       title: 'Is your current flue square or round ?',
       key: 'flueShape',
       showIf: (answers: any) =>
-        answers.flueType?.label === 'Wall',
+        answers.flueType?.label === 'Horizontal',
       options: [
         { label: 'Square', modifier: pricingData.squareFlue },
         { label: 'Round', modifier: 0 },
@@ -176,7 +183,7 @@ function CalculatorContent() {
       title: 'How close to the ground is your flue ?',
       key: 'flueHeight',
       showIf: (answers: any) =>
-        answers.flueType?.label === 'Wall',
+        answers.flueType?.label === 'Horizontal',
       options: [
         { label: 'More than 2m', modifier: 0 },
         { label: 'Less than 2m', modifier: pricingData.lowFlue },
@@ -186,7 +193,7 @@ function CalculatorContent() {
       title: 'Is the flue under a carport, balcony or other structure ?',
       key: 'flueStructure',
       showIf: (answers: any) =>
-        answers.flueType?.label === 'Wall',
+        answers.flueType?.label === 'Horizontal',
       options: [
         { label: 'Yes', modifier: pricingData.flueStructure },
         { label: 'No', modifier: 0 },
@@ -196,7 +203,7 @@ function CalculatorContent() {
       title: 'Is the flue 30cm or more from a door or window ?',
       key: 'flueWindow',
       showIf: (answers: any) =>
-        answers.flueType?.label === 'Wall',
+        answers.flueType?.label === 'Horizontal',
       options: [
         { label: 'Yes', modifier: 0 },
         { label: 'No', modifier: pricingData.flueNearWindow },
@@ -230,34 +237,88 @@ function CalculatorContent() {
       console.log('Pricing rows:', pricingRows)
 
       if (pricingRows) {
-        const getPrice = (name: string, fallback: number) => {
-          const row = pricingRows.find((r: any) => r.name === name)
-          return Number(row?.value ?? fallback)
+        // Rows are matched by their stable `key` column. Falls back to matching
+        // on the old `name` column for rows created before the `key` migration,
+        // then to the hardcoded default if neither is found.
+        const getPrice = (def: { key: string; name: string; fallback: number }, current: number) => {
+          const row = pricingRows.find((r: any) => r.key === def.key) ??
+            pricingRows.find((r: any) => r.name === def.name)
+          return Number(row?.value ?? current ?? def.fallback)
         }
 
-        setPricingData((prev) => ({
-          ...prev,
-          combiSwap: getPrice('Straight Swap (Combi → Combi)', prev.combiSwap),
-          standard: getPrice('Straight Swap (Regular → Regular)', prev.standard),
-          system: getPrice('Straight Swap (System → System)', prev.system),
-          backBoiler: getPrice('Back Boiler Conversion', prev.backBoiler),
-          convertToCombi: getPrice('Combi Conversion', prev.convertToCombi),
-          relocate: getPrice('Boiler Relocation', prev.relocate),
-          roofFlue: getPrice('Vertical Flue', prev.roofFlue),
-          squareFlue: getPrice('Square Flue', prev.squareFlue),
-          lowFlue: getPrice('Low Flue', prev.lowFlue),
-          flueStructure: getPrice('Flue Through Structure', prev.flueStructure),
-          flueNearWindow: getPrice('Flue Near Window', prev.flueNearWindow),
-          oldBoilerSurcharge: getPrice('Old Boiler Surcharge', prev.oldBoilerSurcharge),
-          sundries: getPrice(
-            'Sundries (Pipe, Fittings & Filter)',
-            prev.sundries
-          ),
-        }))
+        setPricingData((prev) => {
+          const next = { ...prev }
+          for (const def of PRICING_DEFINITIONS) {
+            if (def.key in next) {
+              (next as any)[def.key] = getPrice(def, (prev as any)[def.key])
+            }
+          }
+          return next
+        })
       }
     }
 
     loadBoilers()
+  }, [companyId])
+
+  // GTM/GA are injected here (not in the root layout) because this calculator
+  // is embedded on many different companies' websites via ?company_id=, so the
+  // tracking IDs that fire have to be scoped to whichever company is loaded.
+  useEffect(() => {
+    if (!companyId) return
+
+    async function loadTracking() {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('gtm_id, ga4_id, vat_registered')
+        .eq('company_id', companyId)
+        .maybeSingle()
+
+      setVatRegistered(!!data?.vat_registered)
+
+      const gtmId = data?.gtm_id
+      const ga4Id = data?.ga4_id
+
+      if (gtmId && !document.getElementById('gtm-script')) {
+        ;(window as any).dataLayer = (window as any).dataLayer || []
+        ;(window as any).dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' })
+
+        const script = document.createElement('script')
+        script.id = 'gtm-script'
+        script.async = true
+        script.src = `https://www.googletagmanager.com/gtm.js?id=${gtmId}`
+        document.head.appendChild(script)
+
+        const noscript = document.createElement('noscript')
+        const iframe = document.createElement('iframe')
+        iframe.src = `https://www.googletagmanager.com/ns.html?id=${gtmId}`
+        iframe.height = '0'
+        iframe.width = '0'
+        iframe.style.display = 'none'
+        iframe.style.visibility = 'hidden'
+        noscript.appendChild(iframe)
+        document.body.appendChild(noscript)
+      }
+
+      if (ga4Id && !document.getElementById('ga4-script')) {
+        const gtagSrcScript = document.createElement('script')
+        gtagSrcScript.async = true
+        gtagSrcScript.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`
+        document.head.appendChild(gtagSrcScript)
+
+        const inline = document.createElement('script')
+        inline.id = 'ga4-script'
+        inline.innerHTML = `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${ga4Id}');
+        `
+        document.head.appendChild(inline)
+      }
+    }
+
+    loadTracking()
   }, [companyId])
 
   const [customer, setCustomer] = useState({
@@ -481,7 +542,7 @@ function CalculatorContent() {
 
       return {
         ...boiler,
-        price: Math.round(exVatPrice * 1.2),
+        price: Math.round(exVatPrice * (vatRegistered ? 1.2 : 1)),
       }
     })
     .sort((a, b) => {
@@ -512,7 +573,40 @@ function CalculatorContent() {
       setLoadingIndex(3)
     }, 4300)
 
-    const moveOn = setTimeout(() => {
+    const moveOn = setTimeout(async () => {
+      ;(window as any).dataLayer = (window as any).dataLayer || []
+      ;(window as any).dataLayer.push({ event: 'recommendations_viewed' })
+
+      // Preview mode skips the contact-details form entirely — companies
+      // testing their own pricing shouldn't have to fill in a fake name,
+      // email, phone and postcode every time. A placeholder "Test" lead is
+      // created silently instead, so photo upload / survey booking (which
+      // need a lead id) still work the same as the real flow.
+      if (isPreviewMode) {
+        const { data } = await supabase
+          .from('leads')
+          .insert([
+            {
+              company_id: companyId,
+              name: 'Test Preview',
+              email: '',
+              phone: '',
+              postcode: '',
+              status: 'Test',
+              answers,
+            },
+          ])
+          .select()
+          .single()
+
+        if (data) {
+          setLeadId(data.id)
+        }
+
+        setStep(recommendationsStep)
+        return
+      }
+
       setShowLeadModal(true)
       setStep(recommendationsStep)
     }, 4800)
@@ -590,6 +684,11 @@ function CalculatorContent() {
   }
   return (
     <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      {isPreviewMode && (
+        <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-amber-950 shadow">
+          Preview Mode — this is exactly what your customers will see. Any submission is tagged "Test" in your Leads list, not a real enquiry.
+        </div>
+      )}
       <style jsx global>{`
         @keyframes circleLoading {
           from {
@@ -767,21 +866,38 @@ function CalculatorContent() {
               {recommendedBoilers.map((boiler) => (
                 <div
                   key={boiler.name}
-                  className={`rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:shadow-xl ${boiler.tier === 'Better'
+                  className={`rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-300 hover:shadow-xl sm:p-6 ${boiler.tier === 'Better'
                     ? 'border-2 border-green-600 bg-green-50 shadow-lg'
                     : 'border-gray-300'
                     }`}
                 >
-                  <div className="grid gap-6 lg:grid-cols-[320px_1fr_320px] items-start">
-                    <div className="flex flex-col items-center justify-start w-full">
+                  {/* Name/tier always shown first, on every screen size, before the
+                      image/details/price below get reordered for mobile. */}
+                  <p className="text-sm font-semibold text-green-700">
+                    {boiler.tier}
+                  </p>
+
+                  {boiler.tier === 'Better' && (
+                    <span className="inline-block mt-2 rounded-full bg-green-600 px-3 py-1 text-xs font-bold text-white">
+                      OUR BEST SELLER
+                    </span>
+                  )}
+
+                  <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
+                    {boiler.name}
+                  </h2>
+
+                  <div className="mt-5 grid gap-6 lg:grid-cols-[320px_1fr_320px] items-start">
+                    {/* Image: first on mobile (after name above) and desktop alike */}
+                    <div className="order-1 flex flex-col items-center justify-start w-full lg:order-1">
                       {boiler.image ? (
                         <img
                           src={boiler.image}
                           alt={boiler.name}
-                          className="mx-auto max-h-[380px] object-contain"
+                          className="mx-auto max-h-[220px] object-contain sm:max-h-[300px] lg:max-h-[380px]"
                         />
                       ) : (
-                        <div className="flex h-[300px] w-full items-center justify-center rounded-xl border border-dashed text-gray-400">
+                        <div className="flex h-[220px] w-full items-center justify-center rounded-xl border border-dashed text-gray-400 sm:h-[300px]">
                           No image uploaded
                         </div>
                       )}
@@ -794,58 +910,11 @@ function CalculatorContent() {
                         </p>
                       </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold text-green-700">
-                        {boiler.tier}
-                      </p>
-
-                      {boiler.tier === 'Better' && (
-                        <span className="inline-block mt-2 rounded-full bg-green-600 px-3 py-1 text-xs font-bold text-white">
-                          OUR BEST SELLER
-                        </span>
-                      )}
-
-                      <h2 className="mt-3 text-3xl font-bold">
-                        {boiler.name}
-                      </h2>
-
-                      <div className="mt-6 rounded-xl border p-6">
-                        <h3 className="text-2xl font-semibold">
-                          Recommended for your home
-                        </h3>
-
-                        <p className="mt-4 text-gray-600">
-                          Based on your answers, this is one of our most suitable boiler options.
-                        </p>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDetailsBoiler(boiler)
-                            setShowBoilerDetails(true)
-                          }}
-                          className="mt-4 font-semibold text-green-600 underline"
-                        >
-                          See what's included
-                        </button>
-
-                      </div>
-
-                      <div className="mt-5 rounded-xl border p-6">
-                        <h4 className="font-semibold mb-4">Specifications</h4>
-                        <ul className="space-y-3 text-gray-700">
-                          <li>
-                            ✓ {boiler.warranty
-                              ? `${boiler.warranty} Year Warranty`
-                              : 'Manufacturer Warranty'}
-                          </li>
-                          <li>✓ A-Rated Efficiency</li>
-                          <li>✓ Magnetic Filter Included</li>
-                          <li>✓ Gas Safe Installation</li>
-                        </ul>
-                      </div>
-                    </div>
-                    <div className="w-full max-w-[320px] justify-self-center rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm">
+                    {/* Price & call-to-action: pulled up to 2nd on mobile (right
+                        after the photo) so it's never buried under the long
+                        specs/description block below. Desktop keeps it as the
+                        3rd (rightmost) column via lg:order-3. */}
+                    <div className="order-2 w-full max-w-[320px] justify-self-center rounded-3xl border border-slate-200 bg-slate-50 p-6 shadow-sm lg:order-3">
                       <p className="text-center font-semibold text-gray-700">
                         Your fixed price including installation
                       </p>
@@ -863,19 +932,6 @@ function CalculatorContent() {
                           </p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFinanceBoiler(boiler)
-                          setDeposit(500)
-                          setFinanceType('0%')
-                          setFinanceYears(2)
-                          setShowFinanceModal(true)
-                        }}
-                        className="mt-6 w-full rounded-xl border border-green-400 bg-white p-4 font-semibold text-green-700"
-                      >
-                        View finance calculator
-                      </button>
                       <button
                         type="button"
                         onClick={async (e) => {
@@ -918,11 +974,24 @@ function CalculatorContent() {
 
                           setStep(finalPriceStep)
                         }}
-                        className="mt-4 w-full rounded-xl bg-green-600 p-4 font-semibold text-white"
+                        className="mt-6 w-full rounded-xl bg-green-600 p-4 font-semibold text-white"
                       >
                         Choose
                       </button>
-                      <button type="button" className="mt-4 w-full rounded-xl border-2 border-green-600 bg-white p-4 font-semibold text-green-700">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFinanceBoiler(boiler)
+                          setDeposit(500)
+                          setFinanceType('0%')
+                          setFinanceYears(2)
+                          setShowFinanceModal(true)
+                        }}
+                        className="mt-3 w-full rounded-xl border border-green-400 bg-white p-4 font-semibold text-green-700"
+                      >
+                        View finance calculator
+                      </button>
+                      <button type="button" className="mt-3 w-full rounded-xl border-2 border-green-600 bg-white p-4 font-semibold text-green-700">
                         Save this quote
                       </button>
 
@@ -935,7 +1004,46 @@ function CalculatorContent() {
                       >
                         Book Home Survey Instead
                       </button>
+                    </div>
+                    {/* Supporting details/specs: pushed to last on mobile since
+                        it's descriptive, not decision-critical, content. Desktop
+                        keeps it as the middle column via lg:order-2. */}
+                    <div className="order-3 lg:order-2">
+                      <div className="rounded-xl border p-6">
+                        <h3 className="text-2xl font-semibold">
+                          Recommended for your home
+                        </h3>
 
+                        <p className="mt-4 text-gray-600">
+                          Based on your answers, this is one of our most suitable boiler options.
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDetailsBoiler(boiler)
+                            setShowBoilerDetails(true)
+                          }}
+                          className="mt-4 font-semibold text-green-600 underline"
+                        >
+                          See what's included
+                        </button>
+
+                      </div>
+
+                      <div className="mt-5 rounded-xl border p-6">
+                        <h4 className="font-semibold mb-4">Specifications</h4>
+                        <ul className="space-y-3 text-gray-700">
+                          <li>
+                            ✓ {boiler.warranty
+                              ? `${boiler.warranty} Year Warranty`
+                              : 'Manufacturer Warranty'}
+                          </li>
+                          <li>✓ A-Rated Efficiency</li>
+                          <li>✓ Magnetic Filter Included</li>
+                          <li>✓ Gas Safe Installation</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1525,7 +1633,7 @@ function CalculatorContent() {
                     email: customer.email,
                     phone: customer.phone,
                     postcode: (customer as any).postcode || '',
-                    status: 'New Lead',
+                    status: isPreviewMode ? 'Test' : 'New Lead',
                     answers,
                   }
 
@@ -1537,6 +1645,12 @@ function CalculatorContent() {
 
                   if (data) {
                     setLeadId(data.id)
+
+                    ;(window as any).dataLayer = (window as any).dataLayer || []
+                    ;(window as any).dataLayer.push({
+                      event: 'lead_submitted',
+                      lead_id: data.id,
+                    })
                   }
 
                   setShowLeadModal(false)

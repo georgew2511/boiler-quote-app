@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
+import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID } from '@/lib/superAdmin'
 
 export async function getCurrentCompany() {
     console.log('GET CURRENT COMPANY CALLED')
@@ -36,7 +38,32 @@ export async function getCurrentCompany() {
         throw new Error('No company found for this user')
     }
 
-    const company = companies[0]
+    const realCompany = companies[0]
+    const isSuperAdmin = realCompany.id === SUPER_ADMIN_COMPANY_ID
+
+    // The super-admin account can "log in as" any company by setting a cookie.
+    // The cookie is only ever honoured for the super-admin's own login — anyone
+    // else's cookie value (however it got set) is ignored.
+    let company = realCompany
+    let impersonating = false
+
+    if (isSuperAdmin) {
+        const cookieStore = await cookies()
+        const impersonateId = cookieStore.get(IMPERSONATION_COOKIE)?.value
+
+        if (impersonateId && impersonateId !== realCompany.id) {
+            const { data: impersonatedCompany } = await supabaseAuth
+                .from('companies')
+                .select('*')
+                .eq('id', impersonateId)
+                .single()
+
+            if (impersonatedCompany) {
+                company = impersonatedCompany
+                impersonating = true
+            }
+        }
+    }
 
     const { data: settings, error: settingsError } = await supabaseAuth
         .from('company_settings')
@@ -56,5 +83,8 @@ export async function getCurrentCompany() {
     return {
         ...company,
         logo_url: logoUrl || null,
+        isSuperAdmin,
+        isImpersonating: impersonating,
+        realCompanyId: realCompany.id,
     }
 }

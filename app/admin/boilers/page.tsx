@@ -1,7 +1,8 @@
-import React from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { redirect } from 'next/navigation'
+import BoilersGrid from './BoilersGrid'
 
 interface Boiler {
     id: number
@@ -15,9 +16,20 @@ interface Boiler {
 }
 
 export default async function BoilersPage() {
+    const company = await getCurrentCompany()
+
+    const { data: companySettings } = await supabase
+        .from('company_settings')
+        .select('vat_registered')
+        .eq('company_id', company.id)
+        .maybeSingle()
+
+    const vatRegistered = !!companySettings?.vat_registered
+
     const { data: boilers, error } = await supabase
         .from('boilers')
         .select('*')
+        .eq('company_id', company.id)
 
     if (error) {
         return <div>Error: {error.message}</div>
@@ -33,27 +45,14 @@ export default async function BoilersPage() {
         redirect('/admin/boilers')
     }
 
-    async function duplicateBoiler(formData: FormData) {
+    async function toggleBoilerStatus(formData: FormData) {
         'use server'
 
-        const id = Number(formData.get('id'))
+        const id = formData.get('id') as string
+        const currentStatus = formData.get('current_status') as string
+        const nextStatus = currentStatus === 'Active' ? 'Inactive' : 'Active'
 
-        const { data: boiler } = await supabase
-            .from('boilers')
-            .select('*')
-            .eq('id', id)
-            .single()
-
-        if (!boiler) {
-            redirect('/admin/boilers')
-        }
-
-        const { id: _id, created_at, ...boilerData } = boiler
-
-        await supabase.from('boilers').insert({
-            ...boilerData,
-            name: `${boiler.name} (Copy)`
-        })
+        await supabase.from('boilers').update({ status: nextStatus }).eq('id', id)
 
         redirect('/admin/boilers')
     }
@@ -64,13 +63,6 @@ export default async function BoilersPage() {
         regular: (boilers?.filter((b) => b.category === 'regular') ?? []).sort((a, b) => Number(a.output || 0) - Number(b.output || 0)),
         other: (boilers?.filter((b) => !['combi', 'system', 'regular'].includes(b.category)) ?? []).sort((a, b) => a.name.localeCompare(b.name)),
     }
-
-    const orderedBoilers = [
-        ...groupedBoilers.combi,
-        ...groupedBoilers.system,
-        ...groupedBoilers.regular,
-        ...groupedBoilers.other,
-    ]
 
     return (
         <main className="min-h-screen bg-gray-50 py-10">
@@ -85,99 +77,49 @@ export default async function BoilersPage() {
                         </Link>
                         <div>
                             <h1 className="text-4xl font-bold text-gray-900">Boilers</h1>
-                            <p className="text-sm text-gray-500">Manage boiler models, pricing and recommendations</p>
+                            <p className="text-sm text-gray-500">
+                                Manage boiler models, images and specs. To batch-update prices, use{' '}
+                                <Link href="/admin/pricing?tab=boilers" className="text-blue-600 hover:underline">
+                                    Pricing → Boiler Prices
+                                </Link>
+                                .
+                            </p>
                         </div>
                     </div>
-                    <Link
-                        href="/admin/boilers/new"
-                        className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-4 font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md"
-                    >
-                        Add Boiler
-                    </Link>
-                </div>
-                {orderedBoilers.length > 0 ? (
-                    <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-lg">
-                        <table className="w-full table-auto">
-                            <thead>
-                                <tr className="border-b border-gray-200 bg-slate-900 text-left text-white">
-                                    <th className="px-6 py-2">Name</th>
-                                    <th className="px-6 py-2">Tier</th>
-                                    <th className="px-6 py-2">Category</th>
-                                    <th className="px-6 py-2">Output</th>
-                                    <th className="px-6 py-2">Price</th>
-                                    <th className="px-6 py-2">Warranty</th>
-                                    <th className="px-6 py-2">Status</th>
-                                    <th className="px-6 py-2">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {orderedBoilers.map((boiler, index) => (
-                                    <React.Fragment key={boiler.id}>
-                                        {(index === 0 || orderedBoilers[index - 1]?.category !== boiler.category) && (
-                                            <tr>
-                                                <td colSpan={8} className="bg-blue-50 px-6 py-4 text-sm font-bold uppercase tracking-wider text-blue-800 border-y border-blue-100">
-                                                    {boiler.category === 'combi'
-                                                        ? 'Combi Boilers'
-                                                        : boiler.category === 'system'
-                                                            ? 'System Boilers'
-                                                            : boiler.category === 'regular'
-                                                                ? 'Regular Boilers'
-                                                                : 'Other Boilers'}
-                                                </td>
-                                            </tr>
-                                        )}
-
-                                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                            <td className="px-6 py-5">
-                                                <Link
-                                                    href={`/admin/boilers/${boiler.id}`}
-                                                    className="font-semibold text-slate-900 transition-colors hover:text-blue-600"
-                                                >
-                                                    {boiler.name}
-                                                </Link>
-                                                <div className="text-sm text-gray-500">{boiler.output}kW</div>
-                                            </td>
-                                            <td className="px-6 py-5">{boiler.tier || ''}</td>
-                                            <td className="px-6 py-5">
-                                                <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-                                                    {boiler.category}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-5">{boiler.output}</td>
-                                            <td className="px-6 py-5">
-                                                <span className="text-lg font-bold text-green-600">
-                                                    £{Number(boiler.price || 0).toLocaleString()}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-5">{boiler.warranty}</td>
-                                            <td className="px-6 py-5">
-                                                <span className={`rounded-full px-3 py-1 text-sm font-medium ${boiler.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                                    {boiler.status || 'Active'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex flex-wrap gap-2">
-                                                    <form action={duplicateBoiler}>
-                                                        <input type="hidden" name="id" value={boiler.id} />
-                                                        <button type="submit" className="inline-flex h-10 min-w-[90px] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md">
-                                                            Duplicate
-                                                        </button>
-                                                    </form>
-
-                                                    <form action={deleteBoiler}>
-                                                        <input type="hidden" name="id" value={boiler.id} />
-                                                        <button type="submit" className="inline-flex h-10 min-w-[90px] items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-medium text-red-600 transition-all hover:bg-red-100">
-                                                            Delete
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/admin/pricing?tab=boilers"
+                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
+                        >
+                            Manage Pricing
+                        </Link>
+                        <Link
+                            href="/admin/boilers/new"
+                            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-4 font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md"
+                        >
+                            Add Boiler
+                        </Link>
                     </div>
+                </div>
+
+                <div className="mb-6 rounded-2xl bg-blue-50 px-5 py-3 text-sm text-blue-800">
+                    Boiler prices are entered <strong>excluding VAT</strong>.{' '}
+                    {vatRegistered
+                        ? 'Your company is set to VAT registered, so 20% VAT is automatically added on top of these prices when shown to customers on the quote calculator.'
+                        : "Your company is set to not VAT registered, so customers see these prices exactly as entered, with no VAT added."}{' '}
+                    Change this in{' '}
+                    <Link href="/admin/settings" className="underline">
+                        Settings → VAT
+                    </Link>
+                    .
+                </div>
+
+                {boilers && boilers.length > 0 ? (
+                    <BoilersGrid
+                        groupedBoilers={groupedBoilers}
+                        deleteBoiler={deleteBoiler}
+                        toggleBoilerStatus={toggleBoilerStatus}
+                    />
                 ) : (
                     <p>No boilers found</p>
                 )}
