@@ -6,6 +6,25 @@ import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { PRICING_DEFINITIONS } from '@/lib/pricingKeys'
 
+// Dynamic guarantee "sticker" overlaid on boiler photos, pulling its number
+// straight from that boiler's Warranty (Years) field in the admin.
+function GuaranteeBadge({ years, size = 'md' }: { years: number; size?: 'sm' | 'md' }) {
+  const dimensions = size === 'sm' ? 'h-16 w-16' : 'h-24 w-24'
+  const numberSize = size === 'sm' ? 'text-xl' : 'text-3xl'
+  const labelSize = size === 'sm' ? 'text-[8px]' : 'text-[10px]'
+
+  return (
+    <div
+      className={`absolute bottom-0 right-0 flex ${dimensions} flex-col items-center justify-center rounded-full border-4 border-white bg-green-600 text-center text-white shadow-lg`}
+    >
+      <span className={`${numberSize} font-extrabold leading-none`}>{years}</span>
+      <span className={`${labelSize} font-semibold uppercase leading-tight`}>
+        Year<br />Guarantee
+      </span>
+    </div>
+  )
+}
+
 const fallbackPricing = {
   lpg: 500,
   combiSwap: 600,
@@ -890,17 +909,20 @@ function CalculatorContent() {
                   <div className="mt-5 grid gap-6 lg:grid-cols-[320px_1fr_320px] items-start">
                     {/* Image: first on mobile (after name above) and desktop alike */}
                     <div className="order-1 flex flex-col items-center justify-start w-full lg:order-1">
-                      {boiler.image ? (
-                        <img
-                          src={boiler.image}
-                          alt={boiler.name}
-                          className="mx-auto max-h-[220px] object-contain sm:max-h-[300px] lg:max-h-[380px]"
-                        />
-                      ) : (
-                        <div className="flex h-[220px] w-full items-center justify-center rounded-xl border border-dashed text-gray-400 sm:h-[300px]">
-                          No image uploaded
-                        </div>
-                      )}
+                      <div className="relative mx-auto w-full max-w-[280px]">
+                        {boiler.image ? (
+                          <img
+                            src={boiler.image}
+                            alt={boiler.name}
+                            className="mx-auto max-h-[220px] w-full object-contain sm:max-h-[300px] lg:max-h-[380px]"
+                          />
+                        ) : (
+                          <div className="flex h-[220px] w-full items-center justify-center rounded-xl border border-dashed text-gray-400 sm:h-[300px]">
+                            No image uploaded
+                          </div>
+                        )}
+                        {Number(boiler.warranty) > 0 && <GuaranteeBadge years={Number(boiler.warranty)} />}
+                      </div>
                       <div className="mt-4 mx-auto w-full max-w-[320px] rounded-xl border border-green-200 bg-green-50 p-4 text-left">
                         <p className="font-semibold text-green-900">
                           Next step: Photo verification
@@ -1686,17 +1708,20 @@ function CalculatorContent() {
             </div>
 
             <div className="mt-10 grid gap-10 lg:grid-cols-2">
-              <div className="text-center">
+              <div className="relative mx-auto w-full max-w-[420px] text-center">
                 {detailsBoiler.image ? (
                   <img
                     src={detailsBoiler.image}
                     alt={detailsBoiler.name}
-                    className="mx-auto max-h-[500px] object-contain"
+                    className="mx-auto max-h-[500px] w-full object-contain"
                   />
                 ) : (
                   <div className="flex h-[400px] items-center justify-center rounded-xl border border-dashed text-gray-400">
                     No image uploaded
                   </div>
+                )}
+                {Number(detailsBoiler.warranty) > 0 && (
+                  <GuaranteeBadge years={Number(detailsBoiler.warranty)} />
                 )}
               </div>
 
