@@ -77,90 +77,109 @@ export default async function AdminLayout({
                     </p>
                 </div>
 
-                <nav className="flex-1 space-y-2 p-6">
-                    <Link
-                        href="/admin"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Dashboard
-                    </Link>
-
-                    <Link
-                        href="/admin/leads"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Leads
-                    </Link>
-
-                    <Link
-                        href="/admin/boilers"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Boilers
-                    </Link>
-
-                    <Link
-                        href="/admin/pricing"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Pricing
-                    </Link>
-
-                    <Link
-                        href="/admin/service-plans"
-                        className="flex items-center justify-between rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Service Plans
-                        {!company.service_plans_addon && (
-                            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">
-                                Add-on
-                            </span>
-                        )}
-                    </Link>
-
-                    <Link
-                        href="/admin/test-quote"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Test Quote
-                    </Link>
-
-                    <Link
-                        href="/admin/embed-code"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Embed Calculator
-                    </Link>
-
-                    <Link
-                        href="/admin/settings"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Settings
-                    </Link>
-
-                    <Link
-                        href="/admin/help"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Help &amp; Guide
-                    </Link>
-
-                    <Link
-                        href="/admin/billing"
-                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                    >
-                        Billing &amp; Plan
-                    </Link>
-
-                    {company.isSuperAdmin && (
+                <nav className="flex-1 overflow-y-auto p-6">
+                    <div className="space-y-2">
                         <Link
-                            href="/admin/companies"
-                            className="block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-amber-300 transition hover:bg-amber-500/20"
+                            href="/admin"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
                         >
-                            All Companies
+                            Dashboard
                         </Link>
-                    )}
+
+                        <Link
+                            href="/admin/leads"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Leads
+                        </Link>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                        <div className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
+                            Setup Your Calculator
+                        </div>
+                        <Link
+                            href="/admin/boilers"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Boilers
+                        </Link>
+
+                        <Link
+                            href="/admin/pricing"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Pricing
+                        </Link>
+
+                        <Link
+                            href="/admin/settings"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Settings
+                        </Link>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                        <div className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
+                            Go Live
+                        </div>
+                        <Link
+                            href="/admin/test-quote"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Test Quote
+                        </Link>
+
+                        <Link
+                            href="/admin/embed-code"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Embed Calculator
+                        </Link>
+                    </div>
+
+                    <div className="mt-6 space-y-2">
+                        <Link
+                            href="/admin/service-plans"
+                            className="flex items-center justify-between rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Service Plans
+                            {!company.service_plans_addon && (
+                                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">
+                                    Add-on
+                                </span>
+                            )}
+                        </Link>
+                    </div>
+
+                    <div className="mt-auto space-y-2 pt-6">
+                        <div className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
+                            Resources
+                        </div>
+                        <Link
+                            href="/admin/help"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Help &amp; Guide
+                        </Link>
+
+                        <Link
+                            href="/admin/billing"
+                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                        >
+                            Billing &amp; Plan
+                        </Link>
+
+                        {company.isSuperAdmin && (
+                            <Link
+                                href="/admin/companies"
+                                className="mt-3 block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 transition hover:bg-amber-500/20"
+                            >
+                                All Companies
+                            </Link>
+                        )}
+                    </div>
                 </nav>
 
                 <div className="mt-auto border-t border-slate-800 p-6">
