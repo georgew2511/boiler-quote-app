@@ -28,6 +28,7 @@ export async function GET(request: Request) {
                 gtm_id,
                 ga4_id,
                 vat_registered,
+                finance_enabled,
                 minimum_deposit,
                 apr,
                 zero_percent_term_1,
