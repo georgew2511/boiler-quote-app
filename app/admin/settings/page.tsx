@@ -24,6 +24,7 @@ export default function SettingsPage() {
         gtm_id: '',
         ga4_id: '',
         vat_registered: false,
+        finance_enabled: true,
         minimum_deposit: 500,
         apr: 11.9,
         zero_percent_term_1: 12,
@@ -430,8 +431,22 @@ These events are automatically pushed by the quote calculator and can be connect
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <h2 className="text-2xl font-bold">Finance Settings</h2>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-2xl font-bold">Finance Settings</h2>
+                            <label className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-slate-600">
+                                    {settings.finance_enabled ? 'Enabled' : 'Disabled'}
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={settings.finance_enabled}
+                                    onChange={(e) => setSettings({ ...settings, finance_enabled: e.target.checked })}
+                                    className="h-5 w-5 rounded border-slate-300 text-[var(--brand,#16a34a)]"
+                                />
+                            </label>
+                        </div>
 
+                        {settings.finance_enabled && (
                         <div className="mt-6 grid gap-4 md:grid-cols-4">
                             <div>
                                 <label className="mb-2 block font-medium">Minimum Deposit (£)</label>
@@ -474,6 +489,7 @@ These events are automatically pushed by the quote calculator and can be connect
                                 />
                             </div>
                         </div>
+                        )}
                     </div>
 
                     <div className="rounded-2xl border bg-white p-6">

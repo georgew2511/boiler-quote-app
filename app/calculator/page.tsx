@@ -292,7 +292,7 @@ function CalculatorContent() {
     async function loadTracking() {
       const { data } = await supabase
         .from('company_settings')
-        .select('gtm_id, ga4_id, vat_registered, primary_colour, minimum_deposit, apr, zero_percent_term_1, zero_percent_term_2')
+        .select('gtm_id, ga4_id, vat_registered, primary_colour, minimum_deposit, apr, zero_percent_term_1, zero_percent_term_2, finance_enabled')
         .eq('company_id', companyId)
         .maybeSingle()
 
@@ -305,6 +305,7 @@ function CalculatorContent() {
           zero_percent_term_1: data.zero_percent_term_1 || 24,
           zero_percent_term_2: data.zero_percent_term_2 || 60,
         })
+        setFinanceEnabled(data.finance_enabled !== false)
       }
 
       const gtmId = data?.gtm_id
@@ -394,6 +395,7 @@ function CalculatorContent() {
     zero_percent_term_1: 24,
     zero_percent_term_2: 60,
   })
+  const [financeEnabled, setFinanceEnabled] = useState(true)
 
   const [deposit, setDeposit] = useState(500)
   const [financeYears, setFinanceYears] = useState(24)
@@ -1035,19 +1037,21 @@ function CalculatorContent() {
                       >
                         Choose
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFinanceBoiler(boiler)
-                          setDeposit(financeSettings.minimum_deposit)
-                          setFinanceAPR(0)
-                          setFinanceYears(financeSettings.zero_percent_term_1)
-                          setShowFinanceModal(true)
-                        }}
-                        className="mt-3 w-full rounded-xl border border-[color-mix(in_srgb,var(--brand)_55%,white)] bg-white p-4 font-semibold text-[var(--brand)]"
-                      >
-                        View finance calculator
-                      </button>
+                      {financeEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFinanceBoiler(boiler)
+                            setDeposit(financeSettings.minimum_deposit)
+                            setFinanceAPR(0)
+                            setFinanceYears(financeSettings.zero_percent_term_1)
+                            setShowFinanceModal(true)
+                          }}
+                          className="mt-3 w-full rounded-xl border border-[color-mix(in_srgb,var(--brand)_55%,white)] bg-white p-4 font-semibold text-[var(--brand)]"
+                        >
+                          View finance calculator
+                        </button>
+                      )}
                       <button type="button" className="mt-3 w-full rounded-xl border-2 border-[var(--brand)] bg-white p-4 font-semibold text-[var(--brand)]">
                         Save this quote
                       </button>
