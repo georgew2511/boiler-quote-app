@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 import { SELF_SERVE_TIERS } from '@/lib/subscriptionTiers'
 
 export async function POST(request: Request) {
@@ -12,6 +12,7 @@ export async function POST(request: Request) {
         }
 
         const tier = rawTier as 'starter' | 'growth' | 'pro'
+        const stripe = getStripe()
 
         const { data: company, error: companyError } = await supabase
             .from('companies')

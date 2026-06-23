@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 
 export async function POST(request: Request) {
     try {
+        const stripe = getStripe()
         const { company_id } = await request.json()
 
         const { data: company } = await supabase

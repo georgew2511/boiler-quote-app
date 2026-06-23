@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { stripe } from '@/lib/stripe'
+import { getStripe } from '@/lib/stripe'
 
 // Configure this URL (https://yourdomain.com/api/stripe/webhook) in the
 // Stripe dashboard under Developers > Webhooks, and put the signing secret
 // it gives you into STRIPE_WEBHOOK_SECRET.
 export async function POST(request: Request) {
+    const stripe = getStripe()
     const rawBody = await request.text()
     const signature = request.headers.get('stripe-signature') || ''
 
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
 }
 
 async function syncSubscription(companyId: string, subscriptionId: string, tier?: string, subscriptionObj?: any) {
-    const subscription = subscriptionObj || (await stripe.subscriptions.retrieve(subscriptionId))
+    const subscription = subscriptionObj || (await getStripe().subscriptions.retrieve(subscriptionId))
 
     // Stripe moved current_period_start/end onto subscription items in newer
     // API versions — fall back to the first item if the top-level field isn't there.
