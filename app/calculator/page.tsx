@@ -726,16 +726,17 @@ function CalculatorContent() {
             stroke-dashoffset: 0;
           }
         }
-        @keyframes infinityFlow {
+        .animate-circle-loading {
+          animation: circleLoading 1.6s linear infinite, spin 1.6s linear infinite;
+          transform-origin: center;
+        }
+        @keyframes spin {
           from {
-            stroke-dashoffset: 220;
+            transform: rotate(0deg);
           }
           to {
-            stroke-dashoffset: 0;
+            transform: rotate(360deg);
           }
-        }
-        .animate-infinity {
-          animation: infinityFlow 2s linear infinite;
         }
       `}</style>
       <div className="w-full max-w-6xl rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-[0_8px_30px_rgba(15,23,42,0.08)] backdrop-blur-sm">
@@ -814,17 +815,27 @@ function CalculatorContent() {
               <div className="mt-10 flex justify-center">
                 <svg
                   className="h-32 w-32 text-[var(--brand)]"
-                  viewBox="0 0 100 50"
+                  viewBox="0 0 120 120"
                   fill="none"
                 >
-                  <path
-                    d="M10 25C20 5 30 5 50 25C70 45 80 45 90 25C80 5 70 5 50 25C30 45 20 45 10 25Z"
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="54"
                     stroke="currentColor"
-                    strokeWidth="6"
+                    strokeOpacity="0.15"
+                    strokeWidth="8"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="54"
+                    stroke="currentColor"
+                    strokeWidth="8"
                     strokeLinecap="round"
-                    strokeDasharray="220"
-                    strokeDashoffset="220"
-                    className="animate-infinity"
+                    strokeDasharray="339.3"
+                    strokeDashoffset="339.3"
+                    className="animate-circle-loading"
                   />
                 </svg>
               </div>
