@@ -264,6 +264,39 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <h2 className="text-2xl font-bold">Branding Colour</h2>
+                        <p className="mt-2 text-sm text-slate-500">
+                            This colours the buttons, progress bar, guarantee stickers and accents your
+                            customers see on the quote calculator and service plan sign-up page — so it
+                            matches the rest of your website.
+                        </p>
+
+                        <div className="mt-6 flex flex-wrap items-center gap-4">
+                            <input
+                                type="color"
+                                value={settings.primary_colour || '#16a34a'}
+                                onChange={(e) => setSettings({ ...settings, primary_colour: e.target.value })}
+                                className="h-14 w-14 cursor-pointer rounded-2xl border border-slate-300 p-1"
+                            />
+
+                            <input
+                                type="text"
+                                value={settings.primary_colour || ''}
+                                onChange={(e) => setSettings({ ...settings, primary_colour: e.target.value })}
+                                placeholder="#16a34a"
+                                className="w-36 rounded-2xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+
+                            <div
+                                className="flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-white shadow-sm"
+                                style={{ backgroundColor: settings.primary_colour || '#16a34a' }}
+                            >
+                                Preview Button
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Company Contact Details</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-3">

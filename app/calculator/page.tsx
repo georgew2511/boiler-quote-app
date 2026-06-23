@@ -15,7 +15,7 @@ function GuaranteeBadge({ years, size = 'md' }: { years: number; size?: 'sm' | '
 
   return (
     <div
-      className={`absolute bottom-0 right-0 flex ${dimensions} flex-col items-center justify-center rounded-full border-4 border-white bg-green-600 text-center text-white shadow-lg`}
+      className={`absolute bottom-0 right-0 flex ${dimensions} flex-col items-center justify-center rounded-full border-4 border-white bg-[var(--brand)] text-center text-white shadow-lg`}
     >
       <span className={`${numberSize} font-extrabold leading-none`}>{years}</span>
       <span className={`${labelSize} font-semibold uppercase leading-tight`}>
@@ -62,6 +62,9 @@ function CalculatorContent() {
   const [boilers, setBoilers] = useState<any[]>([])
   const [pricingData, setPricingData] = useState(fallbackPricing)
   const [vatRegistered, setVatRegistered] = useState(false)
+  // Falls back to the original house green if a company hasn't set a brand
+  // colour in Settings yet.
+  const [brandColor, setBrandColor] = useState('#16a34a')
 
   const questions = [
     {
@@ -289,11 +292,12 @@ function CalculatorContent() {
     async function loadTracking() {
       const { data } = await supabase
         .from('company_settings')
-        .select('gtm_id, ga4_id, vat_registered')
+        .select('gtm_id, ga4_id, vat_registered, primary_colour')
         .eq('company_id', companyId)
         .maybeSingle()
 
       setVatRegistered(!!data?.vat_registered)
+      if (data?.primary_colour) setBrandColor(data.primary_colour)
 
       const gtmId = data?.gtm_id
       const ga4Id = data?.ga4_id
@@ -374,6 +378,8 @@ function CalculatorContent() {
   })
 
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
+  const [photoUploadError, setPhotoUploadError] = useState('')
+  const [photosUploaded, setPhotosUploaded] = useState(false)
 
   const [deposit, setDeposit] = useState(500)
   const [financeYears, setFinanceYears] = useState(5)
@@ -702,7 +708,10 @@ function CalculatorContent() {
     return data.publicUrl
   }
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <main
+      className="min-h-screen bg-gray-50 flex items-center justify-center p-6"
+      style={{ '--brand': brandColor } as React.CSSProperties}
+    >
       {isPreviewMode && (
         <div className="fixed inset-x-0 top-0 z-[60] bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-amber-950 shadow">
           Preview Mode — this is exactly what your customers will see. Any submission is tagged "Test" in your Leads list, not a real enquiry.
@@ -734,7 +743,7 @@ function CalculatorContent() {
         <div className="mb-8">
           <div className="h-2 bg-gray-200 rounded-full">
             <div
-              className="h-2 bg-green-600 rounded-full transition-all"
+              className="h-2 bg-[var(--brand)] rounded-full transition-all"
               style={{
                 width: `${Math.min((step / (totalSteps - 1)) * 100, 100)}%`,
               }}
@@ -753,7 +762,7 @@ function CalculatorContent() {
                 <button
                   key={option.label}
                   onClick={() => selectAnswer(option)}
-                  className="mx-auto w-full max-w-[420px] rounded-3xl border border-slate-200 bg-white p-4 md:p-6 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-green-500 hover:shadow-lg min-h-[120px] md:min-h-[180px] lg:min-h-[220px] flex flex-col items-center justify-center"
+                  className="mx-auto w-full max-w-[420px] rounded-3xl border border-slate-200 bg-white p-4 md:p-6 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-[var(--brand)] hover:shadow-lg min-h-[120px] md:min-h-[180px] lg:min-h-[220px] flex flex-col items-center justify-center"
                 >
                   {'image' in option && option.image && (
                     <Image
@@ -785,7 +794,8 @@ function CalculatorContent() {
           <>
             <div className="py-12 text-center">
               <div className="mb-10 flex items-center justify-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 text-lg font-bold text-white">
+                {/* Relode's own brand mark — intentionally not themed to the company's colour */}
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-[#22c55e] to-[#059669] text-lg font-bold text-white">
                   R
                 </div>
                 <span className="font-semibold text-slate-700">
@@ -803,7 +813,7 @@ function CalculatorContent() {
 
               <div className="mt-10 flex justify-center">
                 <svg
-                  className="h-32 w-32 text-green-600"
+                  className="h-32 w-32 text-[var(--brand)]"
                   viewBox="0 0 100 50"
                   fill="none"
                 >
@@ -822,21 +832,21 @@ function CalculatorContent() {
               <div className="mt-16 space-y-4 max-w-3xl mx-auto">
                 <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
                   <span>Selecting suitable boilers</span>
-                  <span className="font-semibold text-green-600">
+                  <span className="font-semibold text-[var(--brand)]">
                     {loadingIndex > 0 ? 'Complete' : 'Processing'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
                   <span>Calculating installation requirements</span>
-                  <span className={`font-semibold ${loadingIndex > 1 ? 'text-green-600' : 'animate-pulse text-blue-600'}`}>
+                  <span className={`font-semibold ${loadingIndex > 1 ? 'text-[var(--brand)]' : 'animate-pulse text-blue-600'}`}>
                     {loadingIndex > 1 ? 'Complete' : 'Processing'}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-[0_8px_30px_rgba(15,23,42,0.08)]">
                   <span>Generating fixed pricing</span>
-                  <span className={`font-semibold ${loadingIndex > 2 ? 'text-green-600' : 'animate-pulse text-blue-600'}`}>
+                  <span className={`font-semibold ${loadingIndex > 2 ? 'text-[var(--brand)]' : 'animate-pulse text-blue-600'}`}>
                     {loadingIndex > 2 ? 'Complete' : 'Processing'}
                   </span>
                 </div>
@@ -867,7 +877,7 @@ function CalculatorContent() {
             <h1 className="text-3xl font-bold mb-4 text-center">
               {customer.name ? `${customer.name}, recommended boilers for your home` : 'Recommended boilers for your home'}
             </h1>
-            <div className="mb-6 rounded-xl bg-green-50 p-4 text-center">
+            <div className="mb-6 rounded-xl bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-4 text-center">
               <p className="font-semibold">
                 ⭐⭐⭐⭐⭐ Rated Excellent
               </p>
@@ -886,18 +896,18 @@ function CalculatorContent() {
                 <div
                   key={boiler.name}
                   className={`rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-300 hover:shadow-xl sm:p-6 ${boiler.tier === 'Better'
-                    ? 'border-2 border-green-600 bg-green-50 shadow-lg'
+                    ? 'border-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)] shadow-lg'
                     : 'border-gray-300'
                     }`}
                 >
                   {/* Name/tier always shown first, on every screen size, before the
                       image/details/price below get reordered for mobile. */}
-                  <p className="text-sm font-semibold text-green-700">
+                  <p className="text-sm font-semibold text-[var(--brand)]">
                     {boiler.tier}
                   </p>
 
                   {boiler.tier === 'Better' && (
-                    <span className="inline-block mt-2 rounded-full bg-green-600 px-3 py-1 text-xs font-bold text-white">
+                    <span className="inline-block mt-2 rounded-full bg-[var(--brand)] px-3 py-1 text-xs font-bold text-white">
                       OUR BEST SELLER
                     </span>
                   )}
@@ -923,11 +933,11 @@ function CalculatorContent() {
                         )}
                         {Number(boiler.warranty) > 0 && <GuaranteeBadge years={Number(boiler.warranty)} />}
                       </div>
-                      <div className="mt-4 mx-auto w-full max-w-[320px] rounded-xl border border-green-200 bg-green-50 p-4 text-left">
-                        <p className="font-semibold text-green-900">
+                      <div className="mt-4 mx-auto w-full max-w-[320px] rounded-xl border border-[color-mix(in_srgb,var(--brand)_30%,white)] bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-4 text-left">
+                        <p className="font-semibold text-[color-mix(in_srgb,var(--brand)_70%,black)]">
                           Next step: Photo verification
                         </p>
-                        <p className="mt-2 text-sm text-green-800">
+                        <p className="mt-2 text-sm text-[color-mix(in_srgb,var(--brand)_80%,black)]">
                           Upload a few photos and we'll confirm your guaranteed fixed price.
                         </p>
                       </div>
@@ -996,7 +1006,7 @@ function CalculatorContent() {
 
                           setStep(finalPriceStep)
                         }}
-                        className="mt-6 w-full rounded-xl bg-green-600 p-4 font-semibold text-white"
+                        className="mt-6 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white"
                       >
                         Choose
                       </button>
@@ -1009,11 +1019,11 @@ function CalculatorContent() {
                           setFinanceYears(2)
                           setShowFinanceModal(true)
                         }}
-                        className="mt-3 w-full rounded-xl border border-green-400 bg-white p-4 font-semibold text-green-700"
+                        className="mt-3 w-full rounded-xl border border-[color-mix(in_srgb,var(--brand)_55%,white)] bg-white p-4 font-semibold text-[var(--brand)]"
                       >
                         View finance calculator
                       </button>
-                      <button type="button" className="mt-3 w-full rounded-xl border-2 border-green-600 bg-white p-4 font-semibold text-green-700">
+                      <button type="button" className="mt-3 w-full rounded-xl border-2 border-[var(--brand)] bg-white p-4 font-semibold text-[var(--brand)]">
                         Save this quote
                       </button>
 
@@ -1046,7 +1056,7 @@ function CalculatorContent() {
                             setDetailsBoiler(boiler)
                             setShowBoilerDetails(true)
                           }}
-                          className="mt-4 font-semibold text-green-600 underline"
+                          className="mt-4 font-semibold text-[var(--brand)] underline"
                         >
                           See what's included
                         </button>
@@ -1091,7 +1101,7 @@ function CalculatorContent() {
               Upload a few photos so we can guarantee your fixed price.
             </p>
 
-            <div className="mt-6 rounded-xl bg-green-50 p-4 text-center text-green-800">
+            <div className="mt-6 rounded-xl bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-4 text-center text-[color-mix(in_srgb,var(--brand)_80%,black)]">
               🔒 We use these photos to confirm your installation requirements and guarantee your fixed price.
               <br />
               Most quotes are reviewed within 30 minutes during office hours.
@@ -1122,13 +1132,13 @@ function CalculatorContent() {
 
                   <label
                     htmlFor={`upload-${key}`}
-                    className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-xl bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700"
+                    className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-xl bg-[var(--brand)] px-6 py-3 font-semibold text-white hover:brightness-90"
                   >
                     📷 Take Photo
                   </label>
 
                   {(photos as any)[key] ? (
-                    <div className="mt-3 rounded-lg bg-green-50 p-2 text-sm font-semibold text-green-700">
+                    <div className="mt-3 rounded-lg bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-2 text-sm font-semibold text-[var(--brand)]">
                       ✓ Photo Uploaded
                     </div>
                   ) : (
@@ -1149,6 +1159,7 @@ function CalculatorContent() {
 
                 try {
                   setUploadingPhotos(true)
+                  setPhotoUploadError('')
 
                   const updates: any = {
                     last_updated: new Date().toISOString(),
@@ -1206,20 +1217,32 @@ function CalculatorContent() {
 
                   if (error) {
                     console.error('Photo save error:', error)
+                    setPhotoUploadError(
+                      "Something went wrong uploading your photos. Please try again, or contact us if it keeps happening."
+                    )
+                    return
                   }
 
+                  setPhotosUploaded(true)
                   setStep(finalPriceStep)
-                } catch (err) {
+                } catch (err: any) {
                   console.error('Upload failed:', err)
+                  setPhotoUploadError(
+                    "Something went wrong uploading your photos. Please try again, or contact us if it keeps happening."
+                  )
                 } finally {
                   setUploadingPhotos(false)
                 }
               }}
               disabled={!(photos.boiler && photos.flue && photos.gasMeter && photos.pipework) || uploadingPhotos}
-              className="mt-8 w-full rounded-xl bg-green-600 p-4 font-semibold text-white disabled:opacity-30"
+              className="mt-8 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white disabled:opacity-30"
             >
               {uploadingPhotos ? 'Uploading Photos...' : 'Secure My Fixed Price'}
             </button>
+
+            {photoUploadError && (
+              <p className="mt-3 text-center text-sm text-red-600">{photoUploadError}</p>
+            )}
 
             <button
               onClick={() => setStep(recommendationsStep)}
@@ -1416,6 +1439,17 @@ function CalculatorContent() {
 
         {step === finalPriceStep && (
           <>
+            {photosUploaded && (
+              <div className="mb-6 rounded-2xl bg-[color-mix(in_srgb,var(--brand)_10%,white)] p-5 text-center text-[color-mix(in_srgb,var(--brand)_80%,black)]">
+                <p className="text-lg font-semibold">✓ Photos received</p>
+                <p className="mt-1 text-sm">
+                  Thanks {customer.name?.split(' ')[0]}! We're reviewing your installation requirements now and
+                  will confirm your guaranteed fixed price shortly — most quotes are reviewed within 30 minutes
+                  during office hours.
+                </p>
+              </div>
+            )}
+
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <h1 className="text-3xl font-bold mb-4">
@@ -1426,7 +1460,7 @@ function CalculatorContent() {
                   This is your estimated installation price based on the information provided.
                 </p>
 
-                <div className="rounded-3xl bg-gradient-to-br from-green-600 to-emerald-500 p-8 text-center text-white shadow-[0_12px_40px_rgba(34,197,94,0.25)]">
+                <div className="rounded-3xl bg-gradient-to-br from-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_70%,black)] p-8 text-center text-white shadow-[0_12px_40px_rgba(34,197,94,0.25)]">
                   <p className="text-sm uppercase tracking-wide text-white/80">
                     Guaranteed fixed price after photo check
                   </p>
@@ -1444,7 +1478,7 @@ function CalculatorContent() {
                   </p>
                 </div>
 
-                <div className="mt-6 rounded-2xl border-2 border-green-600 bg-green-50 p-6">
+                <div className="mt-6 rounded-2xl border-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-6">
                   <h2 className="text-2xl font-bold">Almost done</h2>
 
                   <p className="mt-3 text-gray-700">
@@ -1478,18 +1512,36 @@ function CalculatorContent() {
                 <div className="mt-6 rounded-xl bg-gray-50 p-5">
                   {/* Photo Verification / Home Survey block - moved from above */}
                   <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    <button
-                      onClick={() => {
-                        setSurveyRequested(false)
-                        setStep(photoStep)
-                      }}
-                      className="rounded-2xl border-2 border-green-600 bg-green-50 p-6 text-left transition hover:bg-green-100"
-                    >
-                      <h3 className="text-xl font-bold">📷 Photo Verification</h3>
-                      <p className="mt-2 text-gray-600">
-                        Upload a few photos and we'll confirm your installation requirements and fixed price.
-                      </p>
-                    </button>
+                    {photosUploaded ? (
+                      <div className="rounded-2xl border-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-6 text-left">
+                        <h3 className="text-xl font-bold">✓ Photos Uploaded</h3>
+                        <p className="mt-2 text-gray-600">
+                          Got it — we'll confirm your installation requirements and fixed price shortly.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setSurveyRequested(false)
+                            setStep(photoStep)
+                          }}
+                          className="mt-3 text-sm font-semibold text-[var(--brand)] underline"
+                        >
+                          Add or replace a photo
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSurveyRequested(false)
+                          setStep(photoStep)
+                        }}
+                        className="rounded-2xl border-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-6 text-left transition hover:bg-[color-mix(in_srgb,var(--brand)_15%,white)]"
+                      >
+                        <h3 className="text-xl font-bold">📷 Photo Verification</h3>
+                        <p className="mt-2 text-gray-600">
+                          Upload a few photos and we'll confirm your installation requirements and fixed price.
+                        </p>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => {
@@ -1512,7 +1564,7 @@ function CalculatorContent() {
                   <h3 className="font-semibold">What happens next?</h3>
 
                   <div className="mt-4 space-y-3 text-sm text-gray-700">
-                    <p><strong>1.</strong> Upload your photos</p>
+                    <p><strong>1.</strong> {photosUploaded ? '✓ Photos uploaded' : 'Upload your photos'}</p>
                     <p><strong>2.</strong> Surrey Gas reviews your installation requirements</p>
                     <p><strong>3.</strong> We confirm your guaranteed fixed price</p>
                     <p><strong>4.</strong> Choose an installation date that suits you</p>
@@ -1532,7 +1584,7 @@ function CalculatorContent() {
                   <h4 className="font-semibold">Your next steps</h4>
 
                   <div className="mt-4 space-y-4 text-sm">
-                    <div>1. Upload photos</div>
+                    <div>1. {photosUploaded ? '✓ Photos uploaded' : 'Upload photos'}</div>
                     <div>2. We review everything</div>
                     <div>3. Fixed price confirmed</div>
                     <div>4. Choose installation date</div>
@@ -1540,7 +1592,7 @@ function CalculatorContent() {
                 </div>
 
                 <button
-                  className="mt-8 w-full rounded-xl bg-green-600 p-4 font-semibold text-white"
+                  className="mt-8 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white"
                   onClick={() => {
                     setSurveyRequested(false)
                     setStep(photoStep)
@@ -1585,7 +1637,7 @@ function CalculatorContent() {
 
             <div className="mt-6 space-y-4">
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-[var(--brand)] focus:bg-white focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_25%,white)]"
                 placeholder="Full Name"
                 value={customer.name}
                 onChange={(e) => {
@@ -1601,7 +1653,7 @@ function CalculatorContent() {
               />
 
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-[var(--brand)] focus:bg-white focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_25%,white)]"
                 placeholder="Email Address"
                 value={customer.email}
                 onChange={(e) =>
@@ -1610,7 +1662,7 @@ function CalculatorContent() {
               />
 
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-[var(--brand)] focus:bg-white focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_25%,white)]"
                 placeholder="Postcode"
                 value={(customer as any).postcode || ''}
                 onChange={(e) =>
@@ -1622,7 +1674,7 @@ function CalculatorContent() {
               />
 
               <input
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-100"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 text-base transition-all focus:border-[var(--brand)] focus:bg-white focus:ring-4 focus:ring-[color-mix(in_srgb,var(--brand)_25%,white)]"
                 placeholder="Mobile Number"
                 value={customer.phone}
                 onChange={(e) => {
@@ -1684,7 +1736,7 @@ function CalculatorContent() {
                   !customer.phone ||
                   !validatePhone(customer.phone)
                 }
-                className="w-full rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 py-6 text-xl font-semibold text-white shadow-xl disabled:opacity-30"
+                className="w-full rounded-2xl bg-gradient-to-r from-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_70%,black)] py-6 text-xl font-semibold text-white shadow-xl disabled:opacity-30"
               >
                 Show My Fixed Prices
               </button>
@@ -1726,7 +1778,7 @@ function CalculatorContent() {
               </div>
 
               <div>
-                <span className="inline-block rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700">
+                <span className="inline-block rounded-full bg-[color-mix(in_srgb,var(--brand)_15%,white)] px-4 py-2 text-sm font-semibold text-[var(--brand)]">
                   Recommended For Your Home
                 </span>
 
@@ -1778,7 +1830,7 @@ function CalculatorContent() {
                     setShowBoilerDetails(false)
                     setStep(finalPriceStep)
                   }}
-                  className="mt-8 w-full rounded-xl bg-green-600 p-5 font-semibold text-white"
+                  className="mt-8 w-full rounded-xl bg-[var(--brand)] p-5 font-semibold text-white"
                 >
                   Choose This Boiler
                 </button>
@@ -1819,7 +1871,7 @@ function CalculatorContent() {
               </div>
             </div>
 
-            <div className="mt-8 rounded-2xl bg-green-50 p-8">
+            <div className="mt-8 rounded-2xl bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-8">
               <h3 className="text-2xl font-bold">What Happens Next?</h3>
 
               <div className="mt-6 space-y-3">
@@ -1894,7 +1946,7 @@ function CalculatorContent() {
                       setFinanceType('0%')
                       setFinanceYears(2)
                     }}
-                    className={`rounded-xl border p-4 ${financeType === '0%' ? 'bg-green-600 text-white' : ''}`}
+                    className={`rounded-xl border p-4 ${financeType === '0%' ? 'bg-[var(--brand)] text-white' : ''}`}
                   >
                     0% APR Finance
                   </button>
@@ -1904,7 +1956,7 @@ function CalculatorContent() {
                       setFinanceType('11.9%')
                       setFinanceYears(5)
                     }}
-                    className={`rounded-xl border p-4 ${financeType === '11.9%' ? 'bg-green-600 text-white' : ''}`}
+                    className={`rounded-xl border p-4 ${financeType === '11.9%' ? 'bg-[var(--brand)] text-white' : ''}`}
                   >
                     11.9% APR Finance
                   </button>
@@ -1922,7 +1974,7 @@ function CalculatorContent() {
                     <button
                       key={year}
                       onClick={() => setFinanceYears(year)}
-                      className={`rounded-xl px-4 py-3 border ${financeYears === year ? 'bg-green-600 text-white' : ''}`}
+                      className={`rounded-xl px-4 py-3 border ${financeYears === year ? 'bg-[var(--brand)] text-white' : ''}`}
                     >
                       {year === 1 ? '12 Months' : year === 2 && financeType === '0%' ? '24 Months' : `${year} Years`}
                     </button>
@@ -1931,9 +1983,9 @@ function CalculatorContent() {
               </div>
 
               <div className="mt-8 grid gap-4 md:grid-cols-2">
-                <div className="rounded-xl bg-green-50 p-5">
+                <div className="rounded-xl bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-5">
                   <p className="text-sm text-gray-600">Monthly Payment</p>
-                  <p className="mt-2 text-4xl font-bold text-green-700">
+                  <p className="mt-2 text-4xl font-bold text-[var(--brand)]">
                     £{finance.monthly}
                   </p>
                 </div>
@@ -1952,7 +2004,7 @@ function CalculatorContent() {
                   : 'Representative APR 11.9%. Terms available from 3-10 years. Subject to status. Minimum £500 deposit.'}
               </div>
 
-              <button className="mt-8 w-full rounded-xl bg-green-600 p-4 font-semibold text-white">
+              <button className="mt-8 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white">
                 Apply for Finance
               </button>
             </div>
