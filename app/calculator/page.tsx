@@ -434,8 +434,15 @@ function CalculatorContent() {
   }
 
   async function sendQuoteEmail() {
-    if (!customer.email || !customer.name || !selectedBoiler || !companyId) {
-      alert('Please fill in all required details')
+    if (!selectedBoiler || !companyId) {
+      alert('Please select a boiler first')
+      return
+    }
+
+    if (!customer.email || !customer.name) {
+      alert('Please enter your name and email before saving the quote')
+      // Navigate to contact details step (usually near the end of questions)
+      setStep(Math.max(0, questions.length - 1))
       return
     }
 
@@ -1536,6 +1543,16 @@ function CalculatorContent() {
                 <p className="text-gray-600 mb-8">
                   This is your estimated installation price based on the information provided.
                 </p>
+
+                {selectedBoiler?.image && (
+                  <div className="mb-8 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+                    <img
+                      src={selectedBoiler.image}
+                      alt={selectedBoiler.name}
+                      className="w-full h-64 object-cover"
+                    />
+                  </div>
+                )}
 
                 <div className="rounded-3xl bg-gradient-to-br from-[var(--brand)] to-[color-mix(in_srgb,var(--brand)_70%,black)] p-8 text-center text-white shadow-[0_12px_40px_rgba(34,197,94,0.25)]">
                   <p className="text-sm uppercase tracking-wide text-white/80">
