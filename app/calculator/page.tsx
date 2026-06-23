@@ -433,8 +433,10 @@ function CalculatorContent() {
     }
   }
 
-  async function sendQuoteEmail() {
-    if (!selectedBoiler || !companyId) {
+  async function sendQuoteEmail(boilerToEmail?: any) {
+    const boiler = boilerToEmail || selectedBoiler
+
+    if (!boiler || !companyId) {
       alert('Please select a boiler first')
       return
     }
@@ -448,8 +450,8 @@ function CalculatorContent() {
 
     setSendingEmail(true)
     try {
-      const exVatPrice = Number(selectedBoiler.price || 0) / (vatRegistered ? 1.2 : 1)
-      const surchargeAmount = exVatPrice * (vatRegistered ? 1.2 : 1) - exVatPrice + (exVatPrice - Number(selectedBoiler.price || 0))
+      const exVatPrice = Number(boiler.price || 0) / (vatRegistered ? 1.2 : 1)
+      const surchargeAmount = exVatPrice * (vatRegistered ? 1.2 : 1) - exVatPrice + (exVatPrice - Number(boiler.price || 0))
 
       const response = await fetch('/api/email/send-quote', {
         method: 'POST',
@@ -458,9 +460,9 @@ function CalculatorContent() {
           customerEmail: customer.email,
           customerName: customer.name,
           companyId,
-          boilerName: selectedBoiler.name,
-          boilerPrice: Math.round(Number(selectedBoiler.price || 0) / (vatRegistered ? 1.2 : 1)),
-          finalPrice: Math.round(selectedBoiler.price),
+          boilerName: boiler.name,
+          boilerPrice: Math.round(Number(boiler.price || 0) / (vatRegistered ? 1.2 : 1)),
+          finalPrice: Math.round(boiler.price),
           surcharges: [],
         }),
       })
@@ -1104,7 +1106,7 @@ function CalculatorContent() {
                       )}
                       <button
                         type="button"
-                        onClick={sendQuoteEmail}
+                        onClick={() => sendQuoteEmail(boiler)}
                         disabled={sendingEmail}
                         className="mt-3 w-full rounded-xl border-2 border-[var(--brand)] bg-white p-4 font-semibold text-[var(--brand)] disabled:opacity-60"
                       >
