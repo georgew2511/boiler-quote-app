@@ -398,6 +398,9 @@ function CalculatorContent() {
   const [financeEnabled, setFinanceEnabled] = useState(true)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [sortBy, setSortBy] = useState<'price-low' | 'price-high' | 'recommended'>('recommended')
+  const [filterManufacturer, setFilterManufacturer] = useState<string>('')
+  const [showFilters, setShowFilters] = useState(false)
 
   const [deposit, setDeposit] = useState(500)
   const [financeYears, setFinanceYears] = useState(24)
@@ -970,8 +973,83 @@ function CalculatorContent() {
               Based on your answers, we recommend these fixed price options.
             </p>
 
+            {/* Filter and Sort controls */}
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  🔍 Filter
+                </button>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  <option value="recommended">↑ Sort (Recommended)</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                </select>
+              </div>
+              <button
+                onClick={() => setStep(0)}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+              >
+                🔄 Start again
+              </button>
+            </div>
+
+            {/* Filter panel */}
+            {showFilters && (
+              <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
+                <h3 className="font-semibold text-slate-900 mb-4">Filter by Manufacturer</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setFilterManufacturer('')}
+                    className={`rounded-lg px-4 py-2 font-medium transition ${
+                      filterManufacturer === ''
+                        ? 'bg-[var(--brand)] text-white'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    All Manufacturers
+                  </button>
+                  {Array.from(new Set(recommendedBoilers.map((b) => b.manufacturer))).map((mfg) => (
+                    <button
+                      key={mfg}
+                      onClick={() => setFilterManufacturer(mfg)}
+                      className={`rounded-lg px-4 py-2 font-medium transition ${
+                        filterManufacturer === mfg
+                          ? 'bg-[var(--brand)] text-white'
+                          : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                      }`}
+                    >
+                      {mfg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-4">
-              {recommendedBoilers.map((boiler) => (
+              {(() => {
+                let boilersToShow = [...recommendedBoilers]
+
+                // Apply manufacturer filter
+                if (filterManufacturer) {
+                  boilersToShow = boilersToShow.filter((b) => b.manufacturer === filterManufacturer)
+                }
+
+                // Apply sorting
+                if (sortBy === 'price-low') {
+                  boilersToShow = boilersToShow.sort((a, b) => a.price - b.price)
+                } else if (sortBy === 'price-high') {
+                  boilersToShow = boilersToShow.sort((a, b) => b.price - a.price)
+                }
+                // 'recommended' keeps original order
+
+                return boilersToShow.map((boiler) => (
                 <div
                   key={boiler.name}
                   className={`rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all duration-300 hover:shadow-xl sm:p-6 ${boiler.tier === 'Better'
@@ -1165,7 +1243,8 @@ function CalculatorContent() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ))
+              })()}
             </div>
 
             <button
