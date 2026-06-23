@@ -1095,8 +1095,13 @@ function CalculatorContent() {
                           View finance calculator
                         </button>
                       )}
-                      <button type="button" className="mt-3 w-full rounded-xl border-2 border-[var(--brand)] bg-white p-4 font-semibold text-[var(--brand)]">
-                        Save this quote
+                      <button
+                        type="button"
+                        onClick={sendQuoteEmail}
+                        disabled={sendingEmail}
+                        className="mt-3 w-full rounded-xl border-2 border-[var(--brand)] bg-white p-4 font-semibold text-[var(--brand)] disabled:opacity-60"
+                      >
+                        {sendingEmail ? 'Sending...' : 'Save this quote'}
                       </button>
 
                       <button
