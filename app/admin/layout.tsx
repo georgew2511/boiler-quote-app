@@ -1,5 +1,8 @@
 import Link from 'next/link'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
+import { supabase } from '@/lib/supabase'
+import { getTierDefinition } from '@/lib/subscriptionTiers'
+import TrialLockScreen from './TrialLockScreen'
 
 export default async function AdminLayout({
     children,
@@ -7,6 +10,51 @@ export default async function AdminLayout({
     children: React.ReactNode
 }) {
     const company = await getCurrentCompany()
+
+    // Hard lock: no active paid subscription and the 14-day trial has run
+    // out (or a paid subscription lapsed/failed). Grandfathered legacy
+    // companies and the super-admin account itself are never locked.
+    const hasActivePaidPlan =
+        ['starter', 'growth', 'pro'].includes(company.subscription_tier || '') &&
+        company.subscription_status === 'active'
+    const isGrandfathered = company.subscription_tier === 'grandfathered'
+    const trialExpired = company.trial_ends_at && new Date(company.trial_ends_at) < new Date()
+
+    let lockReason: 'trial_ended' | 'past_due' | 'cancelled' | null = null
+
+    if (!company.isSuperAdmin && !isGrandfathered && !hasActivePaidPlan) {
+        if (company.subscription_status === 'past_due') {
+            lockReason = 'past_due'
+        } else if (company.subscription_status === 'cancelled') {
+            lockReason = 'cancelled'
+        } else if (trialExpired) {
+            lockReason = 'trial_ended'
+        }
+    }
+
+    if (lockReason) {
+        return (
+            <TrialLockScreen
+                companyId={company.id}
+                companyName={company.company_name}
+                reason={lockReason}
+            />
+        )
+    }
+
+    const tier = getTierDefinition(company.subscription_tier)
+    let overCap = false
+
+    if (tier.leadLimit !== null) {
+        const periodStart = company.billing_period_start || company.created_at
+        const { count } = await supabase
+            .from('leads')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', company.id)
+            .gte('created_at', periodStart)
+
+        overCap = (count || 0) > tier.leadLimit
+    }
 
     return (
         <div className="flex min-h-screen bg-[#f5f7fb]">
@@ -98,6 +146,13 @@ export default async function AdminLayout({
                         Help &amp; Guide
                     </Link>
 
+                    <Link
+                        href="/admin/billing"
+                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                    >
+                        Billing &amp; Plan
+                    </Link>
+
                     {company.isSuperAdmin && (
                         <Link
                             href="/admin/companies"
@@ -123,6 +178,14 @@ export default async function AdminLayout({
                         <span>Viewing as {company.company_name} (logged in as platform admin)</span>
                         <Link href="/admin/companies" className="underline">
                             Switch company
+                        </Link>
+                    </div>
+                )}
+                {overCap && !company.isImpersonating && (
+                    <div className="flex items-center justify-between bg-amber-100 px-6 py-3 text-sm font-medium text-amber-800">
+                        <span>You've used more leads than your {tier.name} plan includes this month — your calculator keeps working as normal.</span>
+                        <Link href="/admin/billing" className="underline">
+                            View plans
                         </Link>
                     </div>
                 )}
