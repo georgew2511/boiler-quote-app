@@ -396,6 +396,8 @@ function CalculatorContent() {
     zero_percent_term_2: 60,
   })
   const [financeEnabled, setFinanceEnabled] = useState(true)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const [deposit, setDeposit] = useState(500)
   const [financeYears, setFinanceYears] = useState(24)
@@ -428,6 +430,47 @@ function CalculatorContent() {
     return {
       monthly: Math.round(monthly),
       totalPayable: Math.round(monthly * payments + deposit),
+    }
+  }
+
+  async function sendQuoteEmail() {
+    if (!customer.email || !customer.name || !selectedBoiler || !companyId) {
+      alert('Please fill in all required details')
+      return
+    }
+
+    setSendingEmail(true)
+    try {
+      const exVatPrice = Number(selectedBoiler.price || 0) / (vatRegistered ? 1.2 : 1)
+      const surchargeAmount = exVatPrice * (vatRegistered ? 1.2 : 1) - exVatPrice + (exVatPrice - Number(selectedBoiler.price || 0))
+
+      const response = await fetch('/api/email/send-quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerEmail: customer.email,
+          customerName: customer.name,
+          companyId,
+          boilerName: selectedBoiler.name,
+          boilerPrice: Math.round(Number(selectedBoiler.price || 0) / (vatRegistered ? 1.2 : 1)),
+          finalPrice: Math.round(selectedBoiler.price),
+          surcharges: [],
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setEmailSent(true)
+        setTimeout(() => setEmailSent(false), 5000)
+      } else {
+        alert(data.error || 'Failed to send email')
+      }
+    } catch (error) {
+      console.error('Email send error:', error)
+      alert('Failed to send email. Please try again.')
+    } finally {
+      setSendingEmail(false)
     }
   }
 
@@ -1636,6 +1679,14 @@ function CalculatorContent() {
                   className="mt-3 w-full rounded-xl border-2 border-blue-600 bg-white p-4 font-semibold text-blue-700"
                 >
                   Book Home Survey
+                </button>
+
+                <button
+                  onClick={sendQuoteEmail}
+                  disabled={sendingEmail || emailSent}
+                  className="mt-3 w-full rounded-xl border-2 border-slate-300 bg-white p-4 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {emailSent ? '✓ Email sent' : sendingEmail ? 'Sending...' : '📧 Email this quote'}
                 </button>
 
                 <p className="mt-3 text-center text-xs text-gray-500">
