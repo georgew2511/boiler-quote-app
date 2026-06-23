@@ -292,12 +292,20 @@ function CalculatorContent() {
     async function loadTracking() {
       const { data } = await supabase
         .from('company_settings')
-        .select('gtm_id, ga4_id, vat_registered, primary_colour')
+        .select('gtm_id, ga4_id, vat_registered, primary_colour, minimum_deposit, apr, zero_percent_term_1, zero_percent_term_2')
         .eq('company_id', companyId)
         .maybeSingle()
 
       setVatRegistered(!!data?.vat_registered)
       if (data?.primary_colour) setBrandColor(data.primary_colour)
+      if (data) {
+        setFinanceSettings({
+          minimum_deposit: data.minimum_deposit || 500,
+          apr: data.apr || 11.9,
+          zero_percent_term_1: data.zero_percent_term_1 || 24,
+          zero_percent_term_2: data.zero_percent_term_2 || 60,
+        })
+      }
 
       const gtmId = data?.gtm_id
       const ga4Id = data?.ga4_id
@@ -380,20 +388,26 @@ function CalculatorContent() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false)
   const [photoUploadError, setPhotoUploadError] = useState('')
   const [photosUploaded, setPhotosUploaded] = useState(false)
+  const [financeSettings, setFinanceSettings] = useState({
+    minimum_deposit: 500,
+    apr: 11.9,
+    zero_percent_term_1: 24,
+    zero_percent_term_2: 60,
+  })
 
   const [deposit, setDeposit] = useState(500)
-  const [financeYears, setFinanceYears] = useState(5)
-  const [financeType, setFinanceType] = useState<'0%' | '11.9%'>('0%')
+  const [financeYears, setFinanceYears] = useState(24)
+  const [financeAPR, setFinanceAPR] = useState(0)
 
   function calculateFinance(
     amount: number,
     deposit: number,
     years: number,
-    financeType: '0%' | '11.9%'
+    apr: number
   ) {
     const principal = amount - deposit
 
-    if (financeType === '0%') {
+    if (apr === 0) {
       const payments = years * 12
 
       return {
@@ -402,7 +416,7 @@ function CalculatorContent() {
       }
     }
 
-    const monthlyRate = 11.9 / 100 / 12
+    const monthlyRate = apr / 100 / 12
     const payments = years * 12
 
     const monthly =
@@ -1025,9 +1039,9 @@ function CalculatorContent() {
                         type="button"
                         onClick={() => {
                           setFinanceBoiler(boiler)
-                          setDeposit(500)
-                          setFinanceType('0%')
-                          setFinanceYears(2)
+                          setDeposit(financeSettings.minimum_deposit)
+                          setFinanceAPR(0)
+                          setFinanceYears(financeSettings.zero_percent_term_1)
                           setShowFinanceModal(true)
                         }}
                         className="mt-3 w-full rounded-xl border border-[color-mix(in_srgb,var(--brand)_55%,white)] bg-white p-4 font-semibold text-[var(--brand)]"
@@ -1903,7 +1917,7 @@ function CalculatorContent() {
           financeBoiler.price,
           deposit,
           financeYears,
-          financeType
+          financeAPR
         )
 
         return (
@@ -1934,8 +1948,8 @@ function CalculatorContent() {
 
                 <input
                   type="range"
-                  min="500"
-                  max={financeBoiler.price - 500}
+                  min={financeSettings.minimum_deposit}
+                  max={financeBoiler.price - financeSettings.minimum_deposit}
                   step="100"
                   value={deposit}
                   onChange={(e) => setDeposit(Number(e.target.value))}
@@ -1954,22 +1968,22 @@ function CalculatorContent() {
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <button
                     onClick={() => {
-                      setFinanceType('0%')
-                      setFinanceYears(2)
+                      setFinanceAPR(0)
+                      setFinanceYears(financeSettings.zero_percent_term_1 / 12)
                     }}
-                    className={`rounded-xl border p-4 ${financeType === '0%' ? 'bg-[var(--brand)] text-white' : ''}`}
+                    className={`rounded-xl border p-4 ${financeAPR === 0 ? 'bg-[var(--brand)] text-white' : ''}`}
                   >
                     0% APR Finance
                   </button>
 
                   <button
                     onClick={() => {
-                      setFinanceType('11.9%')
-                      setFinanceYears(5)
+                      setFinanceAPR(financeSettings.apr)
+                      setFinanceYears(financeSettings.zero_percent_term_2 / 12)
                     }}
-                    className={`rounded-xl border p-4 ${financeType === '11.9%' ? 'bg-[var(--brand)] text-white' : ''}`}
+                    className={`rounded-xl border p-4 ${financeAPR === financeSettings.apr ? 'bg-[var(--brand)] text-white' : ''}`}
                   >
-                    11.9% APR Finance
+                    {financeSettings.apr}% APR Finance
                   </button>
                 </div>
               </div>
@@ -1978,18 +1992,23 @@ function CalculatorContent() {
                 <label className="font-semibold">Finance Term</label>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(financeType === '0%'
-                    ? [1, 2]
-                    : [3, 4, 5, 6, 7, 8, 9, 10]
-                  ).map((year) => (
-                    <button
-                      key={year}
-                      onClick={() => setFinanceYears(year)}
-                      className={`rounded-xl px-4 py-3 border ${financeYears === year ? 'bg-[var(--brand)] text-white' : ''}`}
-                    >
-                      {year === 1 ? '12 Months' : year === 2 && financeType === '0%' ? '24 Months' : `${year} Years`}
-                    </button>
-                  ))}
+                  {(() => {
+                    const maxMonths = financeAPR === 0 ? financeSettings.zero_percent_term_1 : financeSettings.zero_percent_term_2
+                    const years = Math.ceil(maxMonths / 12)
+                    const options = []
+                    for (let y = 1; y <= years; y++) {
+                      options.push(y)
+                    }
+                    return options.map((year) => (
+                      <button
+                        key={year}
+                        onClick={() => setFinanceYears(year)}
+                        className={`rounded-xl px-4 py-3 border ${financeYears === year ? 'bg-[var(--brand)] text-white' : ''}`}
+                      >
+                        {year === 1 ? '12 Months' : `${year} Years`}
+                      </button>
+                    ))
+                  })()}
                 </div>
               </div>
 
@@ -2010,9 +2029,9 @@ function CalculatorContent() {
               </div>
 
               <div className="mt-6 rounded-xl border p-4 text-sm text-gray-600">
-                {financeType === '0%'
-                  ? '0% APR available over 12 or 24 months. Subject to status. Minimum £500 deposit.'
-                  : 'Representative APR 11.9%. Terms available from 3-10 years. Subject to status. Minimum £500 deposit.'}
+                {financeAPR === 0
+                  ? `0% APR available over up to ${financeSettings.zero_percent_term_1} months. Subject to status. Minimum £${financeSettings.minimum_deposit} deposit.`
+                  : `Representative APR ${financeSettings.apr}%. Terms available up to ${financeSettings.zero_percent_term_2} months. Subject to status. Minimum £${financeSettings.minimum_deposit} deposit.`}
               </div>
 
               <button className="mt-8 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white">
