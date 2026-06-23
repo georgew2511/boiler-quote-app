@@ -91,6 +91,13 @@ export default async function AdminLayout({
                         Settings
                     </Link>
 
+                    <Link
+                        href="/admin/help"
+                        className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
+                    >
+                        Help &amp; Guide
+                    </Link>
+
                     {company.isSuperAdmin && (
                         <Link
                             href="/admin/companies"
