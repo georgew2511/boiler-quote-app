@@ -41,6 +41,7 @@ function ServicePlanContent() {
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
+    const [phoneError, setPhoneError] = useState('')
 
     const [customer, setCustomer] = useState({
         name: '',
@@ -347,9 +348,19 @@ function ServicePlanContent() {
                                 style={{ '--tw-ring-color': `${brandColor}33` } as React.CSSProperties}
                                 placeholder="Mobile Number"
                                 value={customer.phone}
-                                onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
+                                onChange={(e) => {
+                                    const phone = e.target.value
+                                    setCustomer({ ...customer, phone })
+
+                                    if (phone && !validatePhone(phone)) {
+                                        setPhoneError('Please enter a valid UK mobile number, e.g. 07123 456789')
+                                    } else {
+                                        setPhoneError('')
+                                    }
+                                }}
                             />
 
+                            {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
                             {error && <p className="text-sm text-red-600">{error}</p>}
 
                             <p className="text-xs text-gray-400">
