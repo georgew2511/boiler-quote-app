@@ -1351,6 +1351,7 @@ function CalculatorContent() {
                   const updates: any = {
                     last_updated: new Date().toISOString(),
                     status: 'Photos Uploaded',
+                    pipeline_stage: 'Survey Booked',
                   }
 
                   if (photos.boiler) {
@@ -1640,6 +1641,7 @@ function CalculatorContent() {
                       .from('leads')
                       .update({
                         status: 'Home Survey Requested',
+                        pipeline_stage: 'Survey Booked',
                         survey_address: `${surveyBooking.houseName}, ${surveyBooking.addressLine1}, ${surveyBooking.addressLine2}, ${surveyBooking.town}, ${surveyBooking.county}, ${surveyBooking.postcode}`,
                         survey_date: surveyBooking.date,
                         survey_time_slot: surveyBooking.timeSlot,
@@ -1963,6 +1965,7 @@ function CalculatorContent() {
                     phone: customer.phone,
                     postcode: (customer as any).postcode || '',
                     status: isPreviewMode ? 'Test' : 'New Lead',
+                    pipeline_stage: 'New Lead',
                     answers,
                   }
 

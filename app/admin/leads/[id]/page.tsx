@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
+import { getStageDefinition } from '@/lib/pipelineStages'
+import StageSelector from './StageSelector'
 
 export default async function LeadDetailsPage({
     params,
@@ -78,13 +80,29 @@ export default async function LeadDetailsPage({
                         </p>
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex items-center gap-3">
+                        {lead.phone && (
+                            <a
+                                href={`tel:${lead.phone}`}
+                                className="rounded-lg border px-4 py-2 hover:bg-gray-50"
+                                title="Call"
+                            >
+                                📞 Call
+                            </a>
+                        )}
+                        {lead.email && (
+                            <a
+                                href={`mailto:${lead.email}`}
+                                className="rounded-lg border px-4 py-2 hover:bg-gray-50"
+                                title="Email"
+                            >
+                                ✉️ Email
+                            </a>
+                        )}
                         <span className="rounded-full bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700">
                             {lead.source || 'Unknown Source'}
                         </span>
-                        <span className="rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
-                            {lead.status || 'New Lead'}
-                        </span>
+                        <StageSelector leadId={lead.id} currentStage={(lead as any).pipeline_stage} />
                         <Link
                             href="/admin/leads"
                             className="rounded-lg border px-4 py-2 hover:bg-gray-50"
@@ -93,6 +111,12 @@ export default async function LeadDetailsPage({
                         </Link>
                     </div>
                 </div>
+
+                {(lead as any).pipeline_stage === 'Lost' && (lead as any).lost_reason && (
+                    <p className="mt-4 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 text-sm text-rose-700">
+                        <strong>Lost reason:</strong> {(lead as any).lost_reason}
+                    </p>
+                )}
             </div>
 
             <div className="space-y-6">
@@ -159,8 +183,8 @@ export default async function LeadDetailsPage({
                             </div>
 
                             <div className="flex justify-between">
-                                <span className="text-gray-500">Status</span>
-                                <span className="font-medium">{lead.status || 'New Lead'}</span>
+                                <span className="text-gray-500">Pipeline Stage</span>
+                                <span className="font-medium">{getStageDefinition((lead as any).pipeline_stage).label}</span>
                             </div>
                         </div>
                     </div>

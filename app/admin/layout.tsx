@@ -3,6 +3,7 @@ import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { supabase } from '@/lib/supabase'
 import { getTierDefinition } from '@/lib/subscriptionTiers'
 import TrialLockScreen from './TrialLockScreen'
+import SidebarNav from './SidebarNav'
 
 export default async function AdminLayout({
     children,
@@ -57,14 +58,14 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="flex min-h-screen bg-[#f5f7fb]">
-            <aside className="flex w-72 flex-col bg-slate-950 text-white">
+        <div className="flex h-screen overflow-hidden bg-[#f5f7fb]">
+            <aside className="flex h-screen w-72 flex-shrink-0 flex-col bg-slate-950 text-white">
                 <div className="border-b border-slate-800 p-8">
                     {company.logo_url ? (
                         <img
                             src={company.logo_url}
                             alt={company.company_name}
-                            className="h-16 w-auto"
+                            className="h-16 w-full max-w-[180px] object-contain object-left"
                         />
                     ) : (
                         <h1 className="text-3xl font-bold">
@@ -77,112 +78,15 @@ export default async function AdminLayout({
                     </p>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto p-6">
-                    <div className="space-y-2">
-                        <Link
-                            href="/admin"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Dashboard
-                        </Link>
-
-                        <Link
-                            href="/admin/leads"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Leads
-                        </Link>
-                    </div>
-
-                    <div className="mt-6 space-y-2">
-                        <div className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
-                            Setup Your Calculator
-                        </div>
-                        <Link
-                            href="/admin/boilers"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Boilers
-                        </Link>
-
-                        <Link
-                            href="/admin/pricing"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Pricing
-                        </Link>
-
-                        <Link
-                            href="/admin/settings"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Settings
-                        </Link>
-                    </div>
-
-                    <div className="mt-6 space-y-2">
-                        <div className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
-                            Go Live
-                        </div>
-                        <Link
-                            href="/admin/test-quote"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Test Quote
-                        </Link>
-
-                        <Link
-                            href="/admin/embed-code"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Embed Calculator
-                        </Link>
-                    </div>
-
-                    <div className="mt-6 space-y-2">
-                        <Link
-                            href="/admin/service-plans"
-                            className="flex items-center justify-between rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Service Plans
-                            {!company.service_plans_addon && (
-                                <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs text-amber-300">
-                                    Add-on
-                                </span>
-                            )}
-                        </Link>
-                    </div>
-
-                    <div className="mt-auto space-y-2 pt-6">
-                        <div className="px-4 py-2 text-xs font-semibold uppercase text-slate-500">
-                            Resources
-                        </div>
-                        <Link
-                            href="/admin/help"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Help &amp; Guide
-                        </Link>
-
-                        <Link
-                            href="/admin/billing"
-                            className="block rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800"
-                        >
-                            Billing &amp; Plan
-                        </Link>
-
-                        {company.isSuperAdmin && (
-                            <Link
-                                href="/admin/companies"
-                                className="mt-3 block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 transition hover:bg-amber-500/20"
-                            >
-                                All Companies
-                            </Link>
-                        )}
-                    </div>
+                <nav className="admin-sidebar-nav flex flex-1 flex-col overflow-y-auto p-6">
+                    <SidebarNav
+                        serviceAddonEnabled={!!company.service_plans_addon}
+                        isSuperAdmin={company.isSuperAdmin}
+                    />
                 </nav>
 
-                <div className="mt-auto border-t border-slate-800 p-6">
+                <div className="relative mt-auto flex-shrink-0 border-t border-slate-800 bg-slate-950 p-6">
+                    <div className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-b from-transparent to-slate-950" />
                     <img
                         src="/relode-logo-white.png"
                         alt="Relode"
@@ -191,7 +95,7 @@ export default async function AdminLayout({
                 </div>
             </aside>
 
-            <section className="flex-1 bg-[#f5f7fb]">
+            <section className="min-w-0 flex-1 overflow-y-auto bg-[#f5f7fb]">
                 {company.isImpersonating && (
                     <div className="flex items-center justify-between bg-amber-500 px-6 py-3 text-sm font-medium text-amber-950">
                         <span>Viewing as {company.company_name} (logged in as platform admin)</span>
@@ -208,7 +112,7 @@ export default async function AdminLayout({
                         </Link>
                     </div>
                 )}
-                <div className="min-h-screen p-6">
+                <div className="p-6">
                     {children}
                 </div>
             </section>

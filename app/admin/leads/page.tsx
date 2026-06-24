@@ -2,8 +2,18 @@ import { supabase } from '@/lib/supabase'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
+import { getLeadValue } from '@/lib/leadValue'
+import { getStageDefinition } from '@/lib/pipelineStages'
+import KanbanBoard from './KanbanBoard'
 
-export default async function LeadsPage() {
+export default async function LeadsPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ view?: string }>
+}) {
+    const { view } = await searchParams
+    const isListView = view === 'list'
+
     const company = await getCurrentCompany()
     console.log('CURRENT COMPANY FOR LEADS:', company.id, company.company_name)
 
@@ -15,49 +25,6 @@ export default async function LeadsPage() {
 
     console.log('LEADS:', leads)
     console.log('LEADS ERROR:', error)
-
-    const getLeadValue = (lead: any) => {
-        const raw = lead.raw_data || lead.answers || {}
-
-        // Check boiler recommendations first
-        if (Array.isArray(lead.recommended_boilers) && lead.recommended_boilers.length > 0) {
-            const prices = lead.recommended_boilers
-                .map((b: any) => Number(b.price || 0))
-                .filter((p: number) => p > 0)
-
-            if (prices.length > 0) {
-                return Math.max(...prices)
-            }
-        }
-
-        // Check common calculator fields
-        const prices = [
-            raw.worcesterPrice,
-            raw.worcester_price,
-            raw.idealPrice,
-            raw.ideal_price,
-            raw.glowWormPrice,
-            raw.glow_worm_price,
-            raw.vaillantPrice,
-            raw.vaillant_price,
-            lead.quote_price,
-        ]
-            .map((p: any) => Number(p || 0))
-            .filter((p: number) => p > 0)
-
-        if (prices.length > 0) {
-            return Math.max(...prices)
-        }
-
-        // Fallback: attempt to parse prices from notes text
-        const notes = String(lead.notes || lead.note || '')
-
-        const matches = [...notes.matchAll(/(\d+(?:\.\d+)?)/g)]
-            .map(m => Number(m[1]))
-            .filter(n => n > 1000)
-
-        return matches.length > 0 ? Math.max(...matches) : 0
-    }
 
     async function deleteLead(id: number) {
         'use server'
@@ -104,14 +71,14 @@ export default async function LeadsPage() {
                         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                             <p className="text-sm text-slate-500">New Leads</p>
                             <p className="mt-2 text-3xl font-bold text-green-600">
-                                {leads?.filter(l => !l.status || l.status === 'New Lead').length || 0}
+                                {leads?.filter(l => !l.pipeline_stage || l.pipeline_stage === 'New Lead').length || 0}
                             </p>
                         </div>
 
                         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <p className="text-sm text-slate-500">Quoted</p>
-                            <p className="mt-2 text-3xl font-bold text-blue-600">
-                                {leads?.filter(l => l.status === 'Quoted').length || 0}
+                            <p className="text-sm text-slate-500">Won</p>
+                            <p className="mt-2 text-3xl font-bold text-emerald-600">
+                                {leads?.filter(l => l.pipeline_stage === 'Invoiced & Paid').length || 0}
                             </p>
                         </div>
 
@@ -123,6 +90,40 @@ export default async function LeadsPage() {
                         </div>
                     </div>
 
+                    <div className="mt-8 flex items-center gap-2">
+                        <a
+                            href="/admin/leads"
+                            className={`rounded-xl px-4 py-2 text-sm font-semibold ${!isListView
+                                ? 'bg-slate-900 text-white'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                }`}
+                        >
+                            Pipeline View
+                        </a>
+                        <a
+                            href="/admin/leads?view=list"
+                            className={`rounded-xl px-4 py-2 text-sm font-semibold ${isListView
+                                ? 'bg-slate-900 text-white'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                                }`}
+                        >
+                            List View
+                        </a>
+                    </div>
+
+                    {!isListView && (
+                        <div className="mt-6">
+                            <KanbanBoard
+                                leads={(leads || []).map((lead) => ({
+                                    ...lead,
+                                    value: getLeadValue(lead),
+                                }))}
+                            />
+                        </div>
+                    )}
+
+                    {isListView && (
+                    <>
                     <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <div className="grid gap-4 md:grid-cols-4">
                             <input
@@ -260,10 +261,10 @@ export default async function LeadsPage() {
                                                     <span
                                                         className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${lead.status === 'Test'
                                                             ? 'bg-amber-100 text-amber-700'
-                                                            : 'bg-slate-100 text-slate-700'
+                                                            : getStageDefinition(lead.pipeline_stage).color
                                                             }`}
                                                     >
-                                                        {lead.status || 'New Lead'}
+                                                        {lead.status === 'Test' ? 'Test' : getStageDefinition(lead.pipeline_stage).label}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-4 text-right">
@@ -292,6 +293,8 @@ export default async function LeadsPage() {
                             </tbody>
                         </table>
                     </div>
+                    </>
+                    )}
                 </div>
             </main>
         </div>
