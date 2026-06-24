@@ -1420,184 +1420,234 @@ function CalculatorContent() {
 
         {step === surveyStep && (
           <>
-            <h1 className="text-3xl font-bold text-center">
-              Book Your Home Survey
-            </h1>
+            <div className="max-w-2xl mx-auto">
+              <div className="text-center mb-8">
+                <h1 className="text-4xl font-bold text-slate-900">
+                  Let's Schedule Your Survey
+                </h1>
+                <p className="mt-3 text-lg text-slate-600">
+                  Our team will visit at a time that suits you to assess your home and confirm your fixed price
+                </p>
+              </div>
 
-            <p className="mt-4 text-center text-gray-600">
-              Choose a date and time that works for you.
-            </p>
+              {/* Benefits section */}
+              <div className="grid gap-4 mb-8 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-3xl mb-2">✓</div>
+                  <p className="text-sm font-semibold text-slate-900">No Obligation</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-3xl mb-2">👨‍🔧</div>
+                  <p className="text-sm font-semibold text-slate-900">Gas Safe Registered</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+                  <div className="text-3xl mb-2">⭐</div>
+                  <p className="text-sm font-semibold text-slate-900">Trusted Team</p>
+                </div>
+              </div>
 
-            <div className="mt-8 space-y-4">
-              <input
-                type="text"
-                placeholder="House Name / Number"
-                value={surveyBooking.houseName}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    houseName: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              />
+              <div className="space-y-8">
+                {/* Address section */}
+                <div className="rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-8">
+                  <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                    📍 Your Address
+                  </h2>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="House Name / Number"
+                      value={surveyBooking.houseName}
+                      onChange={(e) =>
+                        setSurveyBooking({
+                          ...surveyBooking,
+                          houseName: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                    />
 
-              <input
-                type="text"
-                placeholder="Address Line 1"
-                value={surveyBooking.addressLine1}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    addressLine1: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              />
+                    <input
+                      type="text"
+                      placeholder="Address Line 1"
+                      value={surveyBooking.addressLine1}
+                      onChange={(e) =>
+                        setSurveyBooking({
+                          ...surveyBooking,
+                          addressLine1: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                    />
 
-              <input
-                type="text"
-                placeholder="Address Line 2 (Optional)"
-                value={surveyBooking.addressLine2}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    addressLine2: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              />
+                    <input
+                      type="text"
+                      placeholder="Address Line 2 (Optional)"
+                      value={surveyBooking.addressLine2}
+                      onChange={(e) =>
+                        setSurveyBooking({
+                          ...surveyBooking,
+                          addressLine2: e.target.value,
+                        })
+                      }
+                      className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                    />
 
-              <input
-                type="text"
-                placeholder="Town / City"
-                value={surveyBooking.town}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    town: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <input
+                        type="text"
+                        placeholder="Town / City"
+                        value={surveyBooking.town}
+                        onChange={(e) =>
+                          setSurveyBooking({
+                            ...surveyBooking,
+                            town: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                      />
 
-              <input
-                type="text"
-                placeholder="County"
-                value={surveyBooking.county}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    county: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              />
+                      <input
+                        type="text"
+                        placeholder="County"
+                        value={surveyBooking.county}
+                        onChange={(e) =>
+                          setSurveyBooking({
+                            ...surveyBooking,
+                            county: e.target.value,
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                      />
 
-              <input
-                type="text"
-                placeholder="Postcode"
-                value={surveyBooking.postcode}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    postcode: e.target.value.toUpperCase(),
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              />
+                      <input
+                        type="text"
+                        placeholder="Postcode"
+                        value={surveyBooking.postcode}
+                        onChange={(e) =>
+                          setSurveyBooking({
+                            ...surveyBooking,
+                            postcode: e.target.value.toUpperCase(),
+                          })
+                        }
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              <input
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
-                value={surveyBooking.date}
-                onChange={(e) => {
-                  const selectedDate = e.target.value
+                {/* Date & Time section */}
+                <div className="rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-8">
+                  <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
+                    📅 Pick a Date & Time
+                  </h2>
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Select a weekday
+                      </label>
+                      <input
+                        type="date"
+                        min={new Date().toISOString().split('T')[0]}
+                        value={surveyBooking.date}
+                        onChange={(e) => {
+                          const selectedDate = e.target.value
 
-                  if (isWeekend(selectedDate)) {
-                    alert('Please choose Monday to Friday')
-                    return
-                  }
+                          if (isWeekend(selectedDate)) {
+                            alert('Please choose Monday to Friday')
+                            return
+                          }
 
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    date: selectedDate,
-                  })
-                }}
-                className="w-full rounded-xl border p-4"
-              />
+                          setSurveyBooking({
+                            ...surveyBooking,
+                            date: selectedDate,
+                          })
+                        }}
+                        className="w-full rounded-xl border border-slate-300 bg-slate-50 px-5 py-4 text-base transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/20"
+                      />
+                    </div>
 
-              <select
-                value={surveyBooking.timeSlot}
-                onChange={(e) =>
-                  setSurveyBooking({
-                    ...surveyBooking,
-                    timeSlot: e.target.value,
-                  })
-                }
-                className="w-full rounded-xl border p-4"
-              >
-                <option value="">Select Time Slot</option>
-                <option value="08:00 - 11:00">08:00 - 11:00</option>
-                <option value="11:00 - 13:00">11:00 - 13:00</option>
-                <option value="13:00 - 15:00">13:00 - 15:00</option>
-                <option value="15:00 - 17:00">15:00 - 17:00</option>
-                <option value="17:00 - 19:00">17:00 - 19:00</option>
-              </select>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3">
+                        Select a time slot
+                      </label>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {['08:00 - 11:00', '11:00 - 13:00', '13:00 - 15:00', '15:00 - 17:00', '17:00 - 19:00'].map((slot) => (
+                          <button
+                            key={slot}
+                            onClick={() =>
+                              setSurveyBooking({
+                                ...surveyBooking,
+                                timeSlot: slot,
+                              })
+                            }
+                            className={`rounded-xl px-4 py-3 font-semibold text-center transition-all ${
+                              surveyBooking.timeSlot === slot
+                                ? 'bg-[var(--brand)] text-white shadow-lg'
+                                : 'border-2 border-slate-300 bg-white text-slate-700 hover:border-[var(--brand)]'
+                            }`}
+                          >
+                            🕐 {slot}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-              <button
-                onClick={async () => {
-                  const day = new Date(surveyBooking.date).getDay()
+                <button
+                  onClick={async () => {
+                    const day = new Date(surveyBooking.date).getDay()
 
-                  if (day === 0 || day === 6) {
-                    alert('Please select Monday to Friday')
-                    return
-                  }
+                    if (day === 0 || day === 6) {
+                      alert('Please select Monday to Friday')
+                      return
+                    }
 
-                  // GTM event: survey_requested
-                  if (typeof window !== 'undefined') {
-                    ; (window as any).dataLayer = (window as any).dataLayer || []
-                      ; (window as any).dataLayer.push({
-                        event: 'survey_requested',
-                        lead_id: leadId,
+                    // GTM event: survey_requested
+                    if (typeof window !== 'undefined') {
+                      ; (window as any).dataLayer = (window as any).dataLayer || []
+                        ; (window as any).dataLayer.push({
+                          event: 'survey_requested',
+                          lead_id: leadId,
+                          survey_date: surveyBooking.date,
+                          survey_time_slot: surveyBooking.timeSlot,
+                        })
+                    }
+
+                    await supabase
+                      .from('leads')
+                      .update({
+                        status: 'Home Survey Requested',
+                        survey_address: `${surveyBooking.houseName}, ${surveyBooking.addressLine1}, ${surveyBooking.addressLine2}, ${surveyBooking.town}, ${surveyBooking.county}, ${surveyBooking.postcode}`,
                         survey_date: surveyBooking.date,
                         survey_time_slot: surveyBooking.timeSlot,
+                        last_updated: new Date().toISOString(),
                       })
+                      .eq('id', leadId)
+
+                    alert('Survey booked successfully')
+                    setStep(recommendationsStep)
+                  }}
+                  disabled={
+                    !surveyBooking.houseName ||
+                    !surveyBooking.addressLine1 ||
+                    !surveyBooking.town ||
+                    !surveyBooking.postcode ||
+                    !surveyBooking.date ||
+                    !surveyBooking.timeSlot
                   }
+                  className="w-full rounded-2xl bg-[var(--brand)] p-5 font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✓ Confirm Survey Booking
+                </button>
 
-                  await supabase
-                    .from('leads')
-                    .update({
-                      status: 'Home Survey Requested',
-                      survey_address: `${surveyBooking.houseName}, ${surveyBooking.addressLine1}, ${surveyBooking.addressLine2}, ${surveyBooking.town}, ${surveyBooking.county}, ${surveyBooking.postcode}`,
-                      survey_date: surveyBooking.date,
-                      survey_time_slot: surveyBooking.timeSlot,
-                      last_updated: new Date().toISOString(),
-                    })
-                    .eq('id', leadId)
-
-                  alert('Survey booked successfully')
-                  setStep(recommendationsStep)
-                }}
-                disabled={
-                  !surveyBooking.houseName ||
-                  !surveyBooking.addressLine1 ||
-                  !surveyBooking.town ||
-                  !surveyBooking.postcode ||
-                  !surveyBooking.date ||
-                  !surveyBooking.timeSlot
-                }
-                className="w-full rounded-xl bg-blue-600 p-4 font-semibold text-white disabled:opacity-30"
-              >
-                Book Home Survey
-              </button>
-
-              <button
-                onClick={() => setStep(recommendationsStep)}
-                className="w-full rounded-xl border p-4 font-semibold"
-              >
-                Back
-              </button>
+                <button
+                  onClick={() => setStep(recommendationsStep)}
+                  className="w-full rounded-2xl border-2 border-slate-300 bg-white p-5 font-semibold text-slate-700 transition-all hover:bg-slate-50"
+                >
+                  ← Back to Quotes
+                </button>
+              </div>
             </div>
           </>
         )}
