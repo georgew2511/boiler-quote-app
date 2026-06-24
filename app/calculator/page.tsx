@@ -463,6 +463,7 @@ function CalculatorContent() {
           customerEmail: customer.email,
           customerName: customer.name,
           companyId,
+          leadId,
           boilerName: boiler.name,
           boilerPrice: Math.round(Number(boiler.price || 0) / (vatRegistered ? 1.2 : 1)),
           finalPrice: Math.round(boiler.price),
@@ -542,6 +543,26 @@ function CalculatorContent() {
   const photoStep = questions.length + 4
   const surveyStep = questions.length + 5
   const totalSteps = surveyStep + 1
+
+  // Lets the "Save this quote" / "Email this quote" emails deep-link
+  // straight into the photo upload or survey booking steps via
+  // ?lead_id=...&step=photo|survey, instead of making the customer
+  // redo the whole questionnaire just to take the next action.
+  useEffect(() => {
+    const deepLinkLeadId = searchParams.get('lead_id')
+    const deepLinkStep = searchParams.get('step')
+
+    if (!deepLinkLeadId || !deepLinkStep) return
+
+    setLeadId(Number(deepLinkLeadId))
+
+    if (deepLinkStep === 'photo') {
+      setStep(photoStep)
+    } else if (deepLinkStep === 'survey') {
+      setStep(surveyStep)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const visibleQuestions = questions.filter(
     (question) => !question.showIf || question.showIf(answers)

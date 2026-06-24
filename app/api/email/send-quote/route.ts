@@ -8,6 +8,7 @@ interface QuoteEmailRequest {
   customerEmail: string
   customerName: string
   companyId: string
+  leadId?: number
   boilerName: string
   boilerPrice: number
   finalPrice: number
@@ -16,12 +17,15 @@ interface QuoteEmailRequest {
   selectedAnswers: Record<string, string>
 }
 
+const CALCULATOR_BASE_URL = 'https://portal.relode.io/calculator'
+
 export async function POST(request: Request) {
   try {
     const {
       customerEmail,
       customerName,
       companyId,
+      leadId,
       boilerName,
       boilerPrice,
       finalPrice,
@@ -49,6 +53,13 @@ export async function POST(request: Request) {
 
     const boilerImageHtml = boilerImage ? `<img src="${boilerImage}" alt="${boilerName}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 20px 0;" />` : ''
 
+    const photoSurveyUrl = leadId
+      ? `${CALCULATOR_BASE_URL}?company_id=${companyId}&lead_id=${leadId}&step=photo`
+      : null
+    const homeSurveyUrl = leadId
+      ? `${CALCULATOR_BASE_URL}?company_id=${companyId}&lead_id=${leadId}&step=survey`
+      : null
+
     const html = `
       <!DOCTYPE html>
       <html>
@@ -74,6 +85,12 @@ export async function POST(request: Request) {
             .reply-section p { margin: 0 0 8px 0; font-size: 14px; }
             .reply-section strong { color: #0c4a6e; }
             .reply-email { background: white; padding: 10px; border-radius: 6px; font-family: monospace; color: #0c4a6e; font-weight: 600; word-break: break-all; }
+            .survey-notice { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 20px 0; font-size: 14px; }
+            .survey-notice p { margin: 0; }
+            .survey-buttons { margin: 20px 0; text-align: center; }
+            .survey-button { display: inline-block; margin: 6px; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; text-decoration: none; }
+            .survey-button.primary { background: #16a34a; color: #ffffff; }
+            .survey-button.secondary { background: #ffffff; color: #16a34a; border: 2px solid #16a34a; }
           </style>
         </head>
         <body>
@@ -107,6 +124,17 @@ export async function POST(request: Request) {
                 <td style="text-align: right;">£${finalPrice.toLocaleString()}</td>
               </tr>
             </table>
+
+            <div class="survey-notice">
+              <p><strong>Please note:</strong> this price is subject to a photo survey or in-person home survey to confirm the final installation details. Choose whichever is easiest for you below to move forward.</p>
+            </div>
+
+            ${(photoSurveyUrl || homeSurveyUrl) ? `
+            <div class="survey-buttons">
+              ${photoSurveyUrl ? `<a href="${photoSurveyUrl}" class="survey-button primary">Upload Photos</a>` : ''}
+              ${homeSurveyUrl ? `<a href="${homeSurveyUrl}" class="survey-button secondary">Book a Home Survey</a>` : ''}
+            </div>
+            ` : ''}
 
             ${company.reply_to_email ? `
             <div class="reply-section">
