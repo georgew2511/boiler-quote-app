@@ -24,6 +24,7 @@ export async function GET(request: Request) {
                 email_address,
                 website,
                 from_email,
+                reply_to_email,
                 lead_notification_email,
                 gtm_id,
                 ga4_id,

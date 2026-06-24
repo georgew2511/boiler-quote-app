@@ -20,6 +20,7 @@ export default function SettingsPage() {
         email_address: '',
         website: '',
         from_email: '',
+        reply_to_email: '',
         lead_notification_email: '',
         gtm_id: '',
         ga4_id: '',
@@ -343,6 +344,17 @@ export default function SettingsPage() {
                                     type="email"
                                     value={settings.from_email}
                                     onChange={(e) => setSettings({ ...settings, from_email: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block font-medium">Reply-To Email Address</label>
+                                <input
+                                    type="email"
+                                    value={settings.reply_to_email}
+                                    onChange={(e) => setSettings({ ...settings, reply_to_email: e.target.value })}
+                                    placeholder="where customers can reply to quotes"
                                     className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>

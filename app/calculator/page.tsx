@@ -466,6 +466,7 @@ function CalculatorContent() {
           boilerName: boiler.name,
           boilerPrice: Math.round(Number(boiler.price || 0) / (vatRegistered ? 1.2 : 1)),
           finalPrice: Math.round(boiler.price),
+          boilerImage: boiler.image || undefined,
           surcharges: [],
         }),
       })
