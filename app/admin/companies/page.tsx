@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { IMPERSONATION_COOKIE } from '@/lib/superAdmin'
 
@@ -17,9 +17,9 @@ export default async function CompaniesPage() {
         )
     }
 
-    const supabaseAuth = await createClient()
+    const adminClient = createAdminClient()
 
-    const { data: companies, error } = await supabaseAuth
+    const { data: companies, error } = await adminClient
         .from('companies')
         .select('*')
         .order('company_name')
@@ -50,12 +50,19 @@ export default async function CompaniesPage() {
     async function toggleServicePlansAddon(formData: FormData) {
         'use server'
 
+        // Re-check super-admin on the server before using the
+        // RLS-bypassing admin client, since this is a privileged write.
+        const requestingCompany = await getCurrentCompany()
+        if (!requestingCompany.isSuperAdmin) {
+            throw new Error('Not authorized')
+        }
+
         const companyId = formData.get('company_id') as string
         const currentValue = formData.get('current') as string
         const current = currentValue === 'true' || currentValue === '1'
 
-        const supabaseAuth = await createClient()
-        const { error } = await supabaseAuth
+        const adminClient = createAdminClient()
+        const { error } = await adminClient
             .from('companies')
             .update({ service_plans_addon: !current })
             .eq('id', companyId)
