@@ -51,13 +51,18 @@ export default async function CompaniesPage() {
         'use server'
 
         const companyId = formData.get('company_id') as string
-        const current = formData.get('current') === 'true'
+        const currentValue = formData.get('current') as string
+        const current = currentValue === 'true' || currentValue === '1'
 
         const supabaseAuth = await createClient()
-        await supabaseAuth
+        const { error } = await supabaseAuth
             .from('companies')
             .update({ service_plans_addon: !current })
             .eq('id', companyId)
+
+        if (error) {
+            console.error('Error toggling service plans:', error)
+        }
 
         redirect('/admin/companies')
     }
@@ -101,9 +106,10 @@ export default async function CompaniesPage() {
                                     <td className="px-6 py-4">
                                         <form action={toggleServicePlansAddon}>
                                             <input type="hidden" name="company_id" value={c.id} />
-                                            <input type="hidden" name="current" value={String(!!c.service_plans_addon)} />
+                                            <input type="hidden" name="current" value={c.service_plans_addon ? '1' : '0'} />
                                             <button
-                                                className={`rounded-full px-3 py-1 text-xs font-semibold ${c.service_plans_addon
+                                                type="submit"
+                                                className={`rounded-full px-3 py-1 text-xs font-semibold cursor-pointer transition-colors ${c.service_plans_addon
                                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                                     : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                                                     }`}
