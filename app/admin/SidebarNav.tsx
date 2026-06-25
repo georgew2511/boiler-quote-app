@@ -53,9 +53,11 @@ const RESOURCE_LINKS: NavLink[] = [
 export default function SidebarNav({
     serviceAddonEnabled,
     isSuperAdmin,
+    onNavigate,
 }: {
     serviceAddonEnabled: boolean
     isSuperAdmin: boolean
+    onNavigate?: () => void
 }) {
     const pathname = usePathname()
 
@@ -75,7 +77,7 @@ export default function SidebarNav({
     return (
         <>
             <div className="space-y-2">
-                <Link href="/admin" className={linkClasses(pathname === '/admin')}>
+                <Link href="/admin" onClick={onNavigate} className={linkClasses(pathname === '/admin')}>
                     Dashboard
                 </Link>
             </div>
@@ -107,6 +109,7 @@ export default function SidebarNav({
                                     <Link
                                         key={link.href}
                                         href={link.href}
+                                        onClick={onNavigate}
                                         className={linkClasses(!!pathname?.startsWith(link.href))}
                                     >
                                         {link.label}
@@ -119,16 +122,17 @@ export default function SidebarNav({
             })}
 
             <div className="mt-4 space-y-2">
-                <Link href="/admin/leads" className={linkClasses(!!pathname?.startsWith('/admin/leads'))}>
+                <Link href="/admin/leads" onClick={onNavigate} className={linkClasses(!!pathname?.startsWith('/admin/leads'))}>
                     Leads
                 </Link>
 
-                <Link href="/admin/analytics" className={linkClasses(!!pathname?.startsWith('/admin/analytics'))}>
+                <Link href="/admin/analytics" onClick={onNavigate} className={linkClasses(!!pathname?.startsWith('/admin/analytics'))}>
                     Analytics
                 </Link>
 
                 <Link
                     href="/admin/service-plans"
+                    onClick={onNavigate}
                     className={`flex items-center justify-between rounded-xl px-4 py-3 transition ${pathname?.startsWith('/admin/service-plans')
                         ? 'bg-slate-800 text-white'
                         : 'text-slate-300 hover:bg-slate-800'
@@ -166,6 +170,7 @@ export default function SidebarNav({
                             <Link
                                 key={link.href}
                                 href={link.href}
+                                onClick={onNavigate}
                                 className={linkClasses(!!pathname?.startsWith(link.href))}
                             >
                                 {link.label}
@@ -175,6 +180,7 @@ export default function SidebarNav({
                         {isSuperAdmin && (
                             <Link
                                 href="/admin/companies"
+                                onClick={onNavigate}
                                 className="mt-2 block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 transition hover:bg-amber-500/20"
                             >
                                 All Companies
