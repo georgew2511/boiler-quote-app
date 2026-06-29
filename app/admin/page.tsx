@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { getLeadValue } from '@/lib/leadValue'
 import {
@@ -29,6 +29,7 @@ function percentChange(current: number, previous: number) {
 
 export default async function AdminPage() {
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const { data: leadsRaw } = await supabase
         .from('leads')

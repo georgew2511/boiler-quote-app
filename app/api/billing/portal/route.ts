@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
 import { getStripe } from '@/lib/stripe'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
 export async function POST(request: Request) {
     try {
+        // Always use the authenticated user's own company — never the
+        // company_id from the request body, which would let anyone open a
+        // billing portal session (invoices, payment methods, cancellation)
+        // for any other tenant.
+        const company = await getCurrentCompany()
         const stripe = getStripe()
-        const { company_id } = await request.json()
 
-        const { data: company } = await supabase
-            .from('companies')
-            .select('stripe_customer_id')
-            .eq('id', company_id)
-            .single()
-
-        if (!company?.stripe_customer_id) {
+        if (!company.stripe_customer_id) {
             return NextResponse.json({ error: 'No billing account found yet' }, { status: 404 })
         }
 

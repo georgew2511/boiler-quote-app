@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { PRICING_CATEGORY_LABELS, PricingCategory } from '@/lib/pricingKeys'
 
@@ -13,6 +13,7 @@ export default async function PricingPage({
     const activeTab = tab === 'surcharges' ? 'surcharges' : 'boilers'
 
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const { data: companySettings } = await supabase
         .from('company_settings')
@@ -40,6 +41,8 @@ export default async function PricingPage({
 
     async function saveBoilerPrices(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const boilerIds = formData.getAll('boiler_id')
 
@@ -49,6 +52,7 @@ export default async function PricingPage({
                 .from('boilers')
                 .update({ price: Number(value) })
                 .eq('id', id)
+                .eq('company_id', company.id)
         }
 
         redirect('/admin/pricing?tab=boilers')
@@ -56,6 +60,8 @@ export default async function PricingPage({
 
     async function saveSurcharges(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const pricingIds = formData.getAll('pricing_id')
 
@@ -65,6 +71,7 @@ export default async function PricingPage({
                 .from('pricing')
                 .update({ value: Number(value) })
                 .eq('id', id)
+                .eq('company_id', company.id)
         }
 
         redirect('/admin/pricing?tab=surcharges')

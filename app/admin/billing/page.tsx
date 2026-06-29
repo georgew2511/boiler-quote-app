@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { getTierDefinition, SELF_SERVE_TIERS } from '@/lib/subscriptionTiers'
 import { UpgradeButton, ManageBillingButton } from './BillingActions'
@@ -11,6 +11,7 @@ export default async function BillingPage({
 }) {
     const { success } = await searchParams
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const currentTier = getTierDefinition(company.subscription_tier)
     const periodStart = company.billing_period_start || company.created_at

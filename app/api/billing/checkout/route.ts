@@ -1,28 +1,24 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getStripe } from '@/lib/stripe'
 import { SELF_SERVE_TIERS } from '@/lib/subscriptionTiers'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
 export async function POST(request: Request) {
     try {
-        const { company_id, tier: rawTier } = await request.json()
+        // Always act on the authenticated user's own company — never trust a
+        // company_id supplied by the client, which would let anyone start
+        // checkout (and attach a Stripe customer) on someone else's account.
+        const company = await getCurrentCompany()
+        const supabase = await createClient()
+        const { tier: rawTier } = await request.json()
 
-        if (!company_id || !(rawTier === 'starter' || rawTier === 'growth' || rawTier === 'pro')) {
+        if (!(rawTier === 'starter' || rawTier === 'growth' || rawTier === 'pro')) {
             return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
         }
 
         const tier = rawTier as 'starter' | 'growth' | 'pro'
         const stripe = getStripe()
-
-        const { data: company, error: companyError } = await supabase
-            .from('companies')
-            .select('*')
-            .eq('id', company_id)
-            .single()
-
-        if (companyError || !company) {
-            return NextResponse.json({ error: 'Company not found' }, { status: 404 })
-        }
 
         let stripeCustomerId = company.stripe_customer_id as string | null
 

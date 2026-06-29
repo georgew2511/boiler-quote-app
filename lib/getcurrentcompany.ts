@@ -1,6 +1,6 @@
-import { supabase } from '@/lib/supabase'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID } from '@/lib/superAdmin'
 
 export async function getCurrentCompany() {
@@ -17,9 +17,7 @@ export async function getCurrentCompany() {
     console.log('SERVER USER ERROR:', userError)
 
     if (!user) {
-        throw new Error(
-            `User not authenticated. Supabase error: ${userError?.message || 'No session found'}`
-        )
+        redirect('/login')
     }
 
     const { data: companies, error } = await supabaseAuth

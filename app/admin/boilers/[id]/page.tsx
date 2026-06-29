@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -7,6 +7,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
     const { id: routeId } = await params
     const id = Number(routeId)
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     console.log('Editing boiler id:', id)
 
@@ -42,6 +43,8 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
 
     async function updateBoiler(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
         const updates: Record<string, any> = {}
         const fields = ['name', 'manufacturer', 'tier', 'category', 'output', 'price', 'warranty', 'status']
         for (const field of fields) {
@@ -80,6 +83,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
 
     async function duplicateBoiler() {
         'use server'
+        const supabase = await createClient()
 
         const { id: _id, created_at, ...boilerData } = boiler
 

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { getLeadValue } from '@/lib/leadValue'
 import { RANGE_PRESETS, resolveDateRange, isInRange } from '@/lib/dateRanges'
@@ -115,6 +115,7 @@ export default async function AnalyticsPage({
 }) {
     const params = await searchParams
     const company = await getCurrentCompany()
+    const supabase = await createClient()
     const range = resolveDateRange(params)
 
     const { data: leadsRaw } = await supabase

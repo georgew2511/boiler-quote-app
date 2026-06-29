@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { redirect } from 'next/navigation'
 import BoilersGrid from './BoilersGrid'
@@ -17,6 +17,7 @@ interface Boiler {
 
 export default async function BoilersPage() {
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const { data: companySettings } = await supabase
         .from('company_settings')
@@ -39,8 +40,10 @@ export default async function BoilersPage() {
         'use server'
 
         const id = formData.get('id') as string
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
-        await supabase.from('boilers').delete().eq('id', id)
+        await supabase.from('boilers').delete().eq('id', id).eq('company_id', company.id)
 
         redirect('/admin/boilers')
     }
@@ -51,8 +54,10 @@ export default async function BoilersPage() {
         const id = formData.get('id') as string
         const currentStatus = formData.get('current_status') as string
         const nextStatus = currentStatus === 'Active' ? 'Inactive' : 'Active'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
-        await supabase.from('boilers').update({ status: nextStatus }).eq('id', id)
+        await supabase.from('boilers').update({ status: nextStatus }).eq('id', id).eq('company_id', company.id)
 
         redirect('/admin/boilers')
     }

@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getStageDefinition } from '@/lib/pipelineStages'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import StageSelector from './StageSelector'
 
 export default async function LeadDetailsPage({
@@ -10,11 +11,14 @@ export default async function LeadDetailsPage({
     params: Promise<{ id: string }>
 }) {
     const { id } = await params
+    const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const { data: lead, error } = await supabase
         .from('leads')
         .select('*')
         .eq('id', id)
+        .eq('company_id', company.id)
         .single()
 
     if (error || !lead) {
@@ -40,6 +44,7 @@ export default async function LeadDetailsPage({
                 last_updated: new Date().toISOString(),
             })
             .eq('id', id)
+            .eq('company_id', company.id)
 
         if (updateError) {
             throw new Error(JSON.stringify(updateError))
@@ -61,6 +66,7 @@ export default async function LeadDetailsPage({
                 last_updated: new Date().toISOString(),
             })
             .eq('id', id)
+            .eq('company_id', company.id)
 
         if (updateError) {
             throw new Error(JSON.stringify(updateError))

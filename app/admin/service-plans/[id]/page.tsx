@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -7,6 +7,7 @@ export default async function EditServicePlanPage({ params }: { params: Promise<
     const { id: routeId } = await params
     const id = Number(routeId)
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const { data: plan, error } = await supabase
         .from('service_plans')
@@ -30,6 +31,8 @@ export default async function EditServicePlanPage({ params }: { params: Promise<
 
     async function updatePlan(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const { error: updateError } = await supabase
             .from('service_plans')

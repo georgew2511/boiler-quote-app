@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
@@ -15,6 +15,7 @@ export default async function LeadsPage({
     const isListView = view === 'list'
 
     const company = await getCurrentCompany()
+    const supabase = await createClient()
     console.log('CURRENT COMPANY FOR LEADS:', company.id, company.company_name)
 
     const { data: leads, error } = await supabase

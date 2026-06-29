@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -8,6 +8,7 @@ export default function NewBoilerPage() {
         'use server'
 
         const company = await getCurrentCompany()
+        const supabase = await createClient()
 
         const imageFile = formData.get('image') as File
 

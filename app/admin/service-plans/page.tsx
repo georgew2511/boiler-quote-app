@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
 export default async function ServicePlansPage() {
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     if (!company.service_plans_addon) {
         return (
@@ -73,6 +74,8 @@ export default async function ServicePlansPage() {
 
     async function createPlan(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const { error: insertError } = await supabase.from('service_plans').insert({
             company_id: company.id,
@@ -101,6 +104,8 @@ export default async function ServicePlansPage() {
 
     async function toggleFeatured(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const id = formData.get('id') as string
         const current = formData.get('current') === 'true'
@@ -109,6 +114,7 @@ export default async function ServicePlansPage() {
             .from('service_plans')
             .update({ is_featured: !current })
             .eq('id', id)
+            .eq('company_id', company.id)
 
         if (updateError) {
             throw new Error(`Failed to update plan: ${updateError.message}`)
@@ -119,6 +125,8 @@ export default async function ServicePlansPage() {
 
     async function togglePlanStatus(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const id = formData.get('id') as string
         const currentStatus = formData.get('current_status') as string
@@ -128,6 +136,7 @@ export default async function ServicePlansPage() {
             .from('service_plans')
             .update({ status: nextStatus })
             .eq('id', id)
+            .eq('company_id', company.id)
 
         if (updateError) {
             throw new Error(`Failed to update plan: ${updateError.message}`)
@@ -138,9 +147,15 @@ export default async function ServicePlansPage() {
 
     async function deletePlan(formData: FormData) {
         'use server'
+        const supabase = await createClient()
+        const company = await getCurrentCompany()
 
         const id = formData.get('id') as string
-        const { error: deleteError } = await supabase.from('service_plans').delete().eq('id', id)
+        const { error: deleteError } = await supabase
+            .from('service_plans')
+            .delete()
+            .eq('id', id)
+            .eq('company_id', company.id)
 
         if (deleteError) {
             throw new Error(`Failed to delete plan: ${deleteError.message}`)

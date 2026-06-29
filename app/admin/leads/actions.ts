@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
@@ -10,6 +10,7 @@ export async function updateLeadStage(
     lostReason?: string
 ) {
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const update: Record<string, any> = {
         pipeline_stage: stage,
@@ -38,6 +39,7 @@ export async function updateLeadStage(
 
 export async function saveLeadNotesAndSource(leadId: number, notes: string) {
     const company = await getCurrentCompany()
+    const supabase = await createClient()
 
     const { error } = await supabase
         .from('leads')

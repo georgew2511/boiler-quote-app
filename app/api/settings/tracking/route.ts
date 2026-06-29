@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
 export async function GET(request: Request) {
     try {
@@ -62,17 +64,16 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const company = await getCurrentCompany()
+        const supabase = await createClient()
+
         const body = await request.json()
         console.log('Saving company settings:', body)
 
-        const { company_id, ...settingsData } = body
-
-        if (!company_id) {
-            return NextResponse.json(
-                { error: 'company_id is required' },
-                { status: 400 }
-            )
-        }
+        // Ignore any company_id the client sends — always write to the
+        // authenticated user's own company to prevent cross-tenant writes.
+        const { company_id: _ignored, ...settingsData } = body
+        const company_id = company.id
 
         const { data: existing, error: existingError } = await supabase
             .from('company_settings')

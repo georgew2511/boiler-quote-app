@@ -1,5 +1,5 @@
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/utils/supabase/server'
 import { getTierDefinition } from '@/lib/subscriptionTiers'
 import TrialLockScreen from './TrialLockScreen'
 import AdminChrome from './AdminChrome'
@@ -47,6 +47,7 @@ export default async function AdminLayout({
 
     if (tier.leadLimit !== null) {
         const periodStart = company.billing_period_start || company.created_at
+        const supabase = await createClient()
         const { count } = await supabase
             .from('leads')
             .select('id', { count: 'exact', head: true })
