@@ -4,6 +4,20 @@ import Link from 'next/link'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { IMPERSONATION_COOKIE } from '@/lib/superAdmin'
+import { getTierDefinition } from '@/lib/subscriptionTiers'
+
+const STATUS_STYLES: Record<string, string> = {
+    active: 'bg-green-100 text-green-700',
+    trial: 'bg-blue-100 text-blue-700',
+    past_due: 'bg-amber-100 text-amber-700',
+    cancelled: 'bg-red-100 text-red-700',
+}
+
+function daysUntil(dateStr: string | null) {
+    if (!dateStr) return null
+    const diffMs = new Date(dateStr).getTime() - Date.now()
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+}
 
 export default async function CompaniesPage() {
     const company = await getCurrentCompany()
@@ -22,11 +36,58 @@ export default async function CompaniesPage() {
     const { data: companies, error } = await adminClient
         .from('companies')
         .select('*')
-        .order('company_name')
+        .order('created_at', { ascending: false })
 
     if (error) {
         return <div className="p-8">Error loading companies: {error.message}</div>
     }
+
+    const { data: allLeads } = await adminClient
+        .from('leads')
+        .select('company_id, created_at')
+
+    const leadsByCompany = new Map<string, { created_at: string }[]>()
+    for (const lead of allLeads || []) {
+        if (!lead.company_id) continue
+        const existing = leadsByCompany.get(lead.company_id) || []
+        existing.push({ created_at: lead.created_at })
+        leadsByCompany.set(lead.company_id, existing)
+    }
+
+    const rows = (companies || []).map((c: any) => {
+        const tier = getTierDefinition(c.subscription_tier)
+        const periodStart = c.billing_period_start || c.created_at
+        const leadsThisPeriod = (leadsByCompany.get(c.id) || []).filter(
+            (l) => new Date(l.created_at) >= new Date(periodStart)
+        ).length
+        const leadsAllTime = (leadsByCompany.get(c.id) || []).length
+        const overCap = tier.leadLimit !== null && leadsThisPeriod > tier.leadLimit
+        const trialDaysLeft = c.subscription_status === 'trial' ? daysUntil(c.trial_ends_at) : null
+
+        return {
+            ...c,
+            tier,
+            leadsThisPeriod,
+            leadsAllTime,
+            overCap,
+            trialDaysLeft,
+        }
+    })
+
+    const totalCompanies = rows.length
+    const statusCounts = rows.reduce<Record<string, number>>((acc, r) => {
+        const key = r.subscription_status || 'unknown'
+        acc[key] = (acc[key] || 0) + 1
+        return acc
+    }, {})
+    const estimatedMRR = rows
+        .filter((r) => r.subscription_status === 'active')
+        .reduce((sum, r) => sum + r.tier.priceMonthlyPence, 0) / 100
+    const overCapCount = rows.filter((r) => r.overCap).length
+    const trialsEndingSoon = rows.filter(
+        (r) => r.subscription_status === 'trial' && r.trialDaysLeft !== null && r.trialDaysLeft <= 3
+    ).length
+    const servicePlanAddonCount = rows.filter((r) => r.service_plans_addon).length
 
     async function loginAs(formData: FormData) {
         'use server'
@@ -74,14 +135,38 @@ export default async function CompaniesPage() {
         redirect('/admin/companies')
     }
 
+    async function setSubscriptionTier(formData: FormData) {
+        'use server'
+
+        const requestingCompany = await getCurrentCompany()
+        if (!requestingCompany.isSuperAdmin) {
+            throw new Error('Not authorized')
+        }
+
+        const companyId = formData.get('company_id') as string
+        const tier = formData.get('tier') as string
+
+        const adminClient = createAdminClient()
+        const { error } = await adminClient
+            .from('companies')
+            .update({ subscription_tier: tier })
+            .eq('id', companyId)
+
+        if (error) {
+            console.error('Error setting tier:', error)
+        }
+
+        redirect('/admin/companies')
+    }
+
     return (
         <main className="min-h-screen bg-[#f5f7fb] p-8">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-7xl">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-4xl font-bold">All Companies</h1>
+                        <h1 className="text-4xl font-bold">Super Admin</h1>
                         <p className="mt-2 text-gray-600">
-                            Log in as any company to view and manage their dashboard exactly as they see it.
+                            Platform-wide view of every business on Relode — plans, usage and billing health.
                         </p>
                     </div>
 
@@ -94,23 +179,101 @@ export default async function CompaniesPage() {
                     )}
                 </div>
 
-                <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-                    <table className="w-full">
+                <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="text-sm text-slate-500">Total Companies</div>
+                        <div className="mt-1 text-3xl font-bold text-slate-900">{totalCompanies}</div>
+                        <div className="mt-1 text-xs text-slate-400">
+                            {statusCounts.active || 0} active · {statusCounts.trial || 0} trial ·{' '}
+                            {statusCounts.past_due || 0} past due · {statusCounts.cancelled || 0} cancelled
+                        </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="text-sm text-slate-500">Estimated MRR</div>
+                        <div className="mt-1 text-3xl font-bold text-green-600">£{estimatedMRR.toFixed(0)}</div>
+                        <div className="mt-1 text-xs text-slate-400">From paying self-serve subscriptions only</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="text-sm text-slate-500">Over Their Lead Cap</div>
+                        <div className={`mt-1 text-3xl font-bold ${overCapCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+                            {overCapCount}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-400">Candidates for an upgrade nudge</div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="text-sm text-slate-500">Trials Ending ≤3 Days</div>
+                        <div className={`mt-1 text-3xl font-bold ${trialsEndingSoon > 0 ? 'text-blue-600' : 'text-slate-900'}`}>
+                            {trialsEndingSoon}
+                        </div>
+                        <div className="mt-1 text-xs text-slate-400">{servicePlanAddonCount} have the Service Plans add-on</div>
+                    </div>
+                </div>
+
+                <div className="mt-8 overflow-x-auto rounded-3xl border border-slate-200 bg-white shadow-sm">
+                    <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-slate-200 text-left">
-                                <th className="px-6 py-4">Company</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Service Plans Add-on</th>
-                                <th className="px-6 py-4">Company ID</th>
-                                <th className="px-6 py-4">Action</th>
+                            <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-4">Company</th>
+                                <th className="px-5 py-4">Plan</th>
+                                <th className="px-5 py-4">Status</th>
+                                <th className="px-5 py-4">Leads (Period)</th>
+                                <th className="px-5 py-4">Leads (All Time)</th>
+                                <th className="px-5 py-4">Service Plans</th>
+                                <th className="px-5 py-4">Stripe</th>
+                                <th className="px-5 py-4">Signed Up</th>
+                                <th className="px-5 py-4">Company ID</th>
+                                <th className="px-5 py-4">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {companies?.map((c: any) => (
+                            {rows.map((c) => (
                                 <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
-                                    <td className="px-6 py-4 font-medium">{c.company_name}</td>
-                                    <td className="px-6 py-4 capitalize text-slate-500">{c.subscription_status}</td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-5 py-4 font-medium text-slate-900">
+                                        {c.company_name}
+                                        {c.id === company.realCompanyId && (
+                                            <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">You</span>
+                                        )}
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <form action={setSubscriptionTier} className="flex items-center gap-1">
+                                            <input type="hidden" name="company_id" value={c.id} />
+                                            <select
+                                                name="tier"
+                                                defaultValue={c.subscription_tier || 'grandfathered'}
+                                                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs"
+                                            >
+                                                <option value="grandfathered">Legacy (Free)</option>
+                                                <option value="starter">Starter — £29/mo</option>
+                                                <option value="growth">Growth — £49/mo</option>
+                                                <option value="pro">Pro — £79/mo</option>
+                                            </select>
+                                            <button
+                                                type="submit"
+                                                className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                                                title="Save plan"
+                                            >
+                                                Save
+                                            </button>
+                                        </form>
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[c.subscription_status] || 'bg-slate-100 text-slate-600'}`}>
+                                            {c.subscription_status || 'unknown'}
+                                        </span>
+                                        {c.trialDaysLeft !== null && (
+                                            <div className={`mt-1 text-xs ${c.trialDaysLeft <= 3 ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+                                                {c.trialDaysLeft >= 0 ? `${c.trialDaysLeft}d left` : 'Expired'}
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td className="px-5 py-4">
+                                        <span className={c.overCap ? 'font-semibold text-amber-600' : 'text-slate-700'}>
+                                            {c.leadsThisPeriod}
+                                            {c.tier.leadLimit !== null ? ` / ${c.tier.leadLimit}` : ' / ∞'}
+                                        </span>
+                                    </td>
+                                    <td className="px-5 py-4 text-slate-500">{c.leadsAllTime}</td>
+                                    <td className="px-5 py-4">
                                         <form action={toggleServicePlansAddon}>
                                             <input type="hidden" name="company_id" value={c.id} />
                                             <input type="hidden" name="current" value={c.service_plans_addon ? '1' : '0'} />
@@ -125,8 +288,18 @@ export default async function CompaniesPage() {
                                             </button>
                                         </form>
                                     </td>
-                                    <td className="px-6 py-4 font-mono text-xs text-slate-400">{c.id}</td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-5 py-4">
+                                        {c.stripe_customer_id ? (
+                                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">Linked</span>
+                                        ) : (
+                                            <span className="text-xs text-slate-400">None</span>
+                                        )}
+                                    </td>
+                                    <td className="px-5 py-4 text-slate-500">
+                                        {c.created_at ? new Date(c.created_at).toLocaleDateString('en-GB') : '-'}
+                                    </td>
+                                    <td className="px-5 py-4 font-mono text-xs text-slate-400">{c.id}</td>
+                                    <td className="px-5 py-4">
                                         {c.id === company.realCompanyId ? (
                                             <span className="text-sm text-slate-400">This is you</span>
                                         ) : (
