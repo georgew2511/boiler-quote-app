@@ -207,14 +207,19 @@ export default async function CompaniesPage({
             body: (formData.get('body') as string) || '',
         }
 
-        const adminClient = createAdminClient()
-        const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(
-            requestingCompany.owner_user_id
-        )
-        const toEmail = userData?.user?.email
+        const customEmail = (formData.get('testEmailAddress') as string || '').trim()
+        let toEmail = customEmail
 
-        if (userError || !toEmail) {
-            redirect(`/admin/companies?testEmailError=${encodeURIComponent('Could not find your account email')}`)
+        if (!toEmail) {
+            const adminClient = createAdminClient()
+            const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(
+                requestingCompany.owner_user_id
+            )
+            toEmail = userData?.user?.email || ''
+
+            if (userError || !toEmail) {
+                redirect(`/admin/companies?testEmailError=${encodeURIComponent('Could not find your account email')}`)
+            }
         }
 
         const { error: sendError } = await sendInactivityEmail(toEmail, draftSettings, {
@@ -470,6 +475,18 @@ export default async function CompaniesPage({
                             />
                         </div>
 
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                Test email address <span className="text-slate-400">(optional — defaults to your own account email)</span>
+                            </label>
+                            <input
+                                type="email"
+                                name="testEmailAddress"
+                                placeholder="you@example.com"
+                                className="w-full max-w-sm rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            />
+                        </div>
+
                         <div className="flex items-center gap-3">
                             <button
                                 type="submit"
@@ -481,9 +498,9 @@ export default async function CompaniesPage({
                                 type="submit"
                                 formAction={sendTestInactivityEmail}
                                 className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
-                                title="Sends to your own account email using whatever's currently in the fields above, without saving"
+                                title="Sends using whatever's currently in the fields above, without saving"
                             >
-                                Send Test Email To Me
+                                Send Test Email
                             </button>
                         </div>
                     </form>
