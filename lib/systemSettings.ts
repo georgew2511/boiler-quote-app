@@ -1,4 +1,8 @@
+import { Resend } from 'resend'
 import { createAdminClient } from '@/utils/supabase/admin'
+
+export const INACTIVITY_EMAIL_FROM = process.env.INACTIVITY_EMAIL_FROM || 'Relode <hello@relode.io>'
+export const INACTIVITY_LOGIN_URL = 'https://portal.relode.io/login'
 
 export interface InactivityEmailSettings {
     enabled: boolean
@@ -74,4 +78,24 @@ export function renderInactivityEmail(
         subject: fill(settings.subject),
         body: fill(settings.body),
     }
+}
+
+// Shared by the daily cron job and the Super Admin "Send Test Email" button,
+// so a test send is a faithful preview of exactly what the real thing does.
+export async function sendInactivityEmail(
+    to: string,
+    settings: InactivityEmailSettings,
+    vars: { company_name: string; login_url: string }
+) {
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { subject, body } = renderInactivityEmail(settings, vars)
+
+    return resend.emails.send({
+        from: INACTIVITY_EMAIL_FROM,
+        to,
+        subject,
+        // Plain text body with line breaks preserved — keeps this simple
+        // and easy to edit from the admin area without an HTML editor.
+        html: body.split('\n').map((line) => `<p style="margin:0 0 12px 0;">${line || '&nbsp;'}</p>`).join(''),
+    })
 }

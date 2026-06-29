@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server'
-import { Resend } from 'resend'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { getInactivityEmailSettings, renderInactivityEmail } from '@/lib/systemSettings'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM_EMAIL = process.env.INACTIVITY_EMAIL_FROM || 'Relode <hello@relode.io>'
-const LOGIN_URL = 'https://portal.relode.io/login'
+import { getInactivityEmailSettings, sendInactivityEmail, INACTIVITY_LOGIN_URL } from '@/lib/systemSettings'
 
 // Triggered daily by Vercel Cron (see vercel.json). Vercel automatically
 // sends `Authorization: Bearer ${CRON_SECRET}` for scheduled invocations —
@@ -59,18 +54,9 @@ export async function GET(request: Request) {
             continue
         }
 
-        const { subject, body } = renderInactivityEmail(settings, {
+        const { error: sendError } = await sendInactivityEmail(ownerEmail, settings, {
             company_name: c.company_name,
-            login_url: LOGIN_URL,
-        })
-
-        const { error: sendError } = await resend.emails.send({
-            from: FROM_EMAIL,
-            to: ownerEmail,
-            subject,
-            // Plain text body with line breaks preserved — keeps this simple
-            // and easy to edit from the admin area without an HTML editor.
-            html: body.split('\n').map((line) => `<p style="margin:0 0 12px 0;">${line || '&nbsp;'}</p>`).join(''),
+            login_url: INACTIVITY_LOGIN_URL,
         })
 
         if (sendError) {

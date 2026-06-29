@@ -5,7 +5,12 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { IMPERSONATION_COOKIE } from '@/lib/superAdmin'
 import { getTierDefinition } from '@/lib/subscriptionTiers'
-import { getInactivityEmailSettings, saveInactivityEmailSettings } from '@/lib/systemSettings'
+import {
+    getInactivityEmailSettings,
+    saveInactivityEmailSettings,
+    sendInactivityEmail,
+    INACTIVITY_LOGIN_URL,
+} from '@/lib/systemSettings'
 
 const STATUS_STYLES: Record<string, string> = {
     active: 'bg-green-100 text-green-700',
@@ -20,7 +25,12 @@ function daysUntil(dateStr: string | null) {
     return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
 }
 
-export default async function CompaniesPage() {
+export default async function CompaniesPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ testEmail?: string; testEmailError?: string }>
+}) {
+    const { testEmail, testEmailError } = await searchParams
     const company = await getCurrentCompany()
 
     if (!company.isSuperAdmin) {
@@ -178,6 +188,45 @@ export default async function CompaniesPage() {
         })
 
         redirect('/admin/companies')
+    }
+
+    async function sendTestInactivityEmail(formData: FormData) {
+        'use server'
+
+        const requestingCompany = await getCurrentCompany()
+        if (!requestingCompany.isSuperAdmin) {
+            throw new Error('Not authorized')
+        }
+
+        // Sends whatever is currently typed in the form — including unsaved
+        // edits — so you can preview a change before committing to it.
+        const draftSettings = {
+            enabled: formData.get('enabled') === 'on',
+            daysInactive: Number(formData.get('daysInactive')) || 3,
+            subject: (formData.get('subject') as string) || '',
+            body: (formData.get('body') as string) || '',
+        }
+
+        const adminClient = createAdminClient()
+        const { data: userData, error: userError } = await adminClient.auth.admin.getUserById(
+            requestingCompany.owner_user_id
+        )
+        const toEmail = userData?.user?.email
+
+        if (userError || !toEmail) {
+            redirect(`/admin/companies?testEmailError=${encodeURIComponent('Could not find your account email')}`)
+        }
+
+        const { error: sendError } = await sendInactivityEmail(toEmail, draftSettings, {
+            company_name: requestingCompany.company_name,
+            login_url: INACTIVITY_LOGIN_URL,
+        })
+
+        if (sendError) {
+            redirect(`/admin/companies?testEmailError=${encodeURIComponent(sendError.message)}`)
+        }
+
+        redirect(`/admin/companies?testEmail=${encodeURIComponent(toEmail)}`)
     }
 
     return (
@@ -366,6 +415,17 @@ export default async function CompaniesPage() {
                         in the subject or body — they'll be filled in automatically for each company.
                     </p>
 
+                    {testEmail && (
+                        <div className="mt-4 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-800">
+                            ✓ Test email sent to {testEmail} — check your inbox to see how it looks.
+                        </div>
+                    )}
+                    {testEmailError && (
+                        <div className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+                            Failed to send test email: {testEmailError}
+                        </div>
+                    )}
+
                     <form action={saveInactivitySettings} className="mt-6 space-y-4">
                         <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                             <input
@@ -410,12 +470,22 @@ export default async function CompaniesPage() {
                             />
                         </div>
 
-                        <button
-                            type="submit"
-                            className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800"
-                        >
-                            Save
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="submit"
+                                className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800"
+                            >
+                                Save
+                            </button>
+                            <button
+                                type="submit"
+                                formAction={sendTestInactivityEmail}
+                                className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                                title="Sends to your own account email using whatever's currently in the fields above, without saving"
+                            >
+                                Send Test Email To Me
+                            </button>
+                        </div>
                     </form>
                 </div>
 
