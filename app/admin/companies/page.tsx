@@ -5,6 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { IMPERSONATION_COOKIE } from '@/lib/superAdmin'
 import { getTierDefinition } from '@/lib/subscriptionTiers'
+import { getInactivityEmailSettings, saveInactivityEmailSettings } from '@/lib/systemSettings'
 
 const STATUS_STYLES: Record<string, string> = {
     active: 'bg-green-100 text-green-700',
@@ -89,6 +90,8 @@ export default async function CompaniesPage() {
     ).length
     const servicePlanAddonCount = rows.filter((r) => r.service_plans_addon).length
 
+    const inactivityEmailSettings = await getInactivityEmailSettings()
+
     async function loginAs(formData: FormData) {
         'use server'
 
@@ -159,6 +162,24 @@ export default async function CompaniesPage() {
         redirect('/admin/companies')
     }
 
+    async function saveInactivitySettings(formData: FormData) {
+        'use server'
+
+        const requestingCompany = await getCurrentCompany()
+        if (!requestingCompany.isSuperAdmin) {
+            throw new Error('Not authorized')
+        }
+
+        await saveInactivityEmailSettings({
+            enabled: formData.get('enabled') === 'on',
+            daysInactive: Number(formData.get('daysInactive')) || 3,
+            subject: (formData.get('subject') as string) || '',
+            body: (formData.get('body') as string) || '',
+        })
+
+        redirect('/admin/companies')
+    }
+
     return (
         <main className="min-h-screen bg-[#f5f7fb] p-8">
             <div className="mx-auto max-w-7xl">
@@ -218,6 +239,7 @@ export default async function CompaniesPage() {
                                 <th className="px-5 py-4">Status</th>
                                 <th className="px-5 py-4">Leads (Period)</th>
                                 <th className="px-5 py-4">Leads (All Time)</th>
+                                <th className="px-5 py-4">Last Seen</th>
                                 <th className="px-5 py-4">Service Plans</th>
                                 <th className="px-5 py-4">Stripe</th>
                                 <th className="px-5 py-4">Signed Up</th>
@@ -273,6 +295,9 @@ export default async function CompaniesPage() {
                                         </span>
                                     </td>
                                     <td className="px-5 py-4 text-slate-500">{c.leadsAllTime}</td>
+                                    <td className="px-5 py-4 text-slate-500">
+                                        {c.last_seen_at ? new Date(c.last_seen_at).toLocaleDateString('en-GB') : 'Never'}
+                                    </td>
                                     <td className="px-5 py-4">
                                         <form action={toggleServicePlansAddon}>
                                             <input type="hidden" name="company_id" value={c.id} />
@@ -315,6 +340,68 @@ export default async function CompaniesPage() {
                             ))}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h2 className="text-2xl font-bold">Inactivity Email</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Automatically nudges a company's owner by email once they've gone quiet on the dashboard.
+                        Runs once a day. Use <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{'{{company_name}}'}</code>{' '}
+                        and <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">{'{{login_url}}'}</code> as placeholders
+                        in the subject or body — they'll be filled in automatically for each company.
+                    </p>
+
+                    <form action={saveInactivitySettings} className="mt-6 space-y-4">
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                            <input
+                                type="checkbox"
+                                name="enabled"
+                                defaultChecked={inactivityEmailSettings.enabled}
+                                className="h-4 w-4 rounded border-slate-300"
+                            />
+                            Send inactivity emails
+                        </label>
+
+                        <div className="max-w-xs">
+                            <label className="mb-1 block text-sm font-medium text-slate-700">
+                                Send after this many days of inactivity
+                            </label>
+                            <input
+                                type="number"
+                                name="daysInactive"
+                                min={1}
+                                defaultValue={inactivityEmailSettings.daysInactive}
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Subject</label>
+                            <input
+                                type="text"
+                                name="subject"
+                                defaultValue={inactivityEmailSettings.subject}
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-slate-700">Body</label>
+                            <textarea
+                                name="body"
+                                rows={8}
+                                defaultValue={inactivityEmailSettings.body}
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-mono"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800"
+                        >
+                            Save
+                        </button>
+                    </form>
                 </div>
 
                 <Link href="/admin" className="mt-6 inline-block text-blue-600 hover:underline">

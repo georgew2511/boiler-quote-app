@@ -1,4 +1,5 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID } from '@/lib/superAdmin'
@@ -38,6 +39,18 @@ export async function getCurrentCompany() {
 
     const realCompany = companies[0]
     const isSuperAdmin = realCompany.id === SUPER_ADMIN_COMPANY_ID
+
+    // Records that this account is actively using the dashboard, so the
+    // inactivity-email cron can tell who's gone quiet. Uses the admin client
+    // (bypasses RLS) since this is internal bookkeeping, not user input —
+    // swallow errors so a missing column/table never breaks the page itself.
+    createAdminClient()
+        .from('companies')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', realCompany.id)
+        .then(({ error: lastSeenError }) => {
+            if (lastSeenError) console.error('Failed to update last_seen_at:', lastSeenError)
+        })
 
     // The super-admin account can "log in as" any company by setting a cookie.
     // The cookie is only ever honoured for the super-admin's own login — anyone
