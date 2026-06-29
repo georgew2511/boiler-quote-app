@@ -239,7 +239,7 @@ export default async function CompaniesPage() {
                                 <th className="px-5 py-4">Status</th>
                                 <th className="px-5 py-4">Leads (Period)</th>
                                 <th className="px-5 py-4">Leads (All Time)</th>
-                                <th className="px-5 py-4">Last Seen</th>
+                                <th className="px-5 py-4">Last Login</th>
                                 <th className="px-5 py-4">Service Plans</th>
                                 <th className="px-5 py-4">Stripe</th>
                                 <th className="px-5 py-4">Signed Up</th>
@@ -296,7 +296,22 @@ export default async function CompaniesPage() {
                                     </td>
                                     <td className="px-5 py-4 text-slate-500">{c.leadsAllTime}</td>
                                     <td className="px-5 py-4 text-slate-500">
-                                        {c.last_seen_at ? new Date(c.last_seen_at).toLocaleDateString('en-GB') : 'Never'}
+                                        {c.last_seen_at ? (
+                                            <>
+                                                <div>
+                                                    {new Date(c.last_seen_at).toLocaleDateString('en-GB', { timeZone: 'Europe/London' })}
+                                                </div>
+                                                <div className="text-xs text-slate-400">
+                                                    {new Date(c.last_seen_at).toLocaleTimeString('en-GB', {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        timeZone: 'Europe/London',
+                                                    })}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            'Never'
+                                        )}
                                     </td>
                                     <td className="px-5 py-4">
                                         <form action={toggleServicePlansAddon}>
