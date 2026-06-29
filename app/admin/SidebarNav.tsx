@@ -176,17 +176,17 @@ export default function SidebarNav({
                                 {link.label}
                             </Link>
                         ))}
-
-                        {isSuperAdmin && (
-                            <Link
-                                href="/admin/companies"
-                                onClick={onNavigate}
-                                className="mt-2 block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300 transition hover:bg-amber-500/20"
-                            >
-                                All Companies
-                            </Link>
-                        )}
                     </div>
+                )}
+
+                {isSuperAdmin && (
+                    <Link
+                        href="/admin/companies"
+                        onClick={onNavigate}
+                        className="mt-4 block rounded-xl border border-amber-600/40 bg-amber-500/10 px-4 py-3 text-center text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                    >
+                        Superuser Admin
+                    </Link>
                 )}
             </div>
         </>
