@@ -26,71 +26,53 @@ export default function AdminChrome({
     const [mobileOpen, setMobileOpen] = useState(false)
 
     return (
-        <div className="flex h-screen overflow-hidden bg-[#f5f7fb]">
+        <div className="flex h-screen overflow-hidden bg-slate-50">
             {/* Mobile top bar */}
-            <div className="fixed inset-x-0 top-0 z-30 flex items-center justify-between border-b border-slate-800 bg-slate-950 px-4 py-3 text-white md:hidden">
+            <div className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-slate-800 bg-slate-950 px-4 md:hidden">
                 <button
                     type="button"
                     onClick={() => setMobileOpen(true)}
-                    aria-label="Open menu"
-                    className="rounded-lg p-2 hover:bg-slate-800"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
                 >
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </button>
-
                 {logoUrl ? (
-                    <img src={logoUrl} alt={companyName} className="h-8 max-w-[140px] object-contain" />
+                    <img src={logoUrl} alt={companyName} className="h-7 max-w-[120px] object-contain" />
                 ) : (
-                    <span className="font-semibold">{companyName}</span>
+                    <span className="text-sm font-semibold text-white">{companyName}</span>
                 )}
-
-                <span className="w-10" />
+                <div className="w-8" />
             </div>
 
-            {/* Backdrop, mobile only */}
+            {/* Mobile backdrop */}
             {mobileOpen && (
-                <div
-                    onClick={() => setMobileOpen(false)}
-                    className="fixed inset-0 z-30 bg-black/50 md:hidden"
-                />
+                <div onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-black/60 md:hidden" />
             )}
 
-            <aside
-                className={`fixed inset-y-0 left-0 z-40 flex h-screen w-72 flex-shrink-0 flex-col bg-slate-950 text-white transition-transform duration-300 md:static md:z-auto md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'
-                    }`}
-            >
-                <div className="flex items-start justify-between border-b border-slate-800 p-8">
-                    <div>
-                        {logoUrl ? (
-                            <img
-                                src={logoUrl}
-                                alt={companyName}
-                                className="h-16 w-full max-w-[180px] object-contain object-left"
-                            />
-                        ) : (
-                            <h1 className="text-3xl font-bold">{companyName}</h1>
-                        )}
-
-                        <p className="mt-2 text-sm text-slate-400">
-                            Admin Portal
-                        </p>
-                    </div>
-
+            {/* Sidebar */}
+            <aside className={`fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col bg-slate-950 transition-transform duration-200 md:static md:z-auto md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                {/* Logo area */}
+                <div className="flex h-16 items-center justify-between border-b border-slate-800/60 px-5">
+                    {logoUrl ? (
+                        <img src={logoUrl} alt={companyName} className="h-8 max-w-[140px] object-contain object-left" />
+                    ) : (
+                        <span className="text-base font-semibold text-white">{companyName}</span>
+                    )}
                     <button
                         type="button"
                         onClick={() => setMobileOpen(false)}
-                        aria-label="Close menu"
-                        className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 md:hidden"
+                        className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-800 hover:text-white md:hidden"
                     >
-                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
-                <nav className="admin-sidebar-nav flex flex-1 flex-col overflow-y-auto p-6">
+                {/* Nav */}
+                <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
                     <SidebarNav
                         serviceAddonEnabled={serviceAddonEnabled}
                         isSuperAdmin={isSuperAdmin}
@@ -98,37 +80,34 @@ export default function AdminChrome({
                     />
                 </nav>
 
-                <div className="relative mt-auto flex-shrink-0 border-t border-slate-800 bg-slate-950 p-6">
-                    <div className="pointer-events-none absolute inset-x-0 -top-6 h-6 bg-gradient-to-b from-transparent to-slate-950" />
-                    <img
-                        src="/relode-logo-white.png"
-                        alt="Relode"
-                        className="mx-auto h-10 w-auto opacity-80"
-                    />
+                {/* Relode branding */}
+                <div className="border-t border-slate-800/60 px-5 py-4">
+                    <img src="/relode-logo-white.png" alt="Relode" className="h-6 w-auto opacity-50" />
                 </div>
             </aside>
 
-            <section className="min-w-0 flex-1 overflow-y-auto bg-[#f5f7fb] pt-14 md:pt-0">
+            {/* Main content */}
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                {/* Banners */}
                 {isImpersonating && (
-                    <div className="flex items-center justify-between bg-amber-500 px-6 py-3 text-sm font-medium text-amber-950">
-                        <span>Viewing as {companyName} (logged in as platform admin)</span>
-                        <Link href="/admin/companies" className="underline">
-                            Switch company
-                        </Link>
+                    <div className="flex items-center justify-between bg-amber-400 px-6 py-2.5 text-xs font-semibold text-amber-950">
+                        <span>Viewing as {companyName}</span>
+                        <Link href="/admin/companies" className="underline underline-offset-2">Switch company</Link>
                     </div>
                 )}
                 {overCap && !isImpersonating && (
-                    <div className="flex items-center justify-between bg-amber-100 px-6 py-3 text-sm font-medium text-amber-800">
-                        <span>You&apos;ve used more leads than your {tierName} plan includes this month — your calculator keeps working as normal.</span>
-                        <Link href="/admin/billing" className="underline">
-                            View plans
-                        </Link>
+                    <div className="flex items-center justify-between bg-amber-50 border-b border-amber-100 px-6 py-2.5 text-xs font-medium text-amber-700">
+                        <span>You've exceeded your {tierName} plan's monthly lead limit — your calculator is still live.</span>
+                        <Link href="/admin/billing" className="font-semibold underline underline-offset-2">Upgrade</Link>
                     </div>
                 )}
-                <div className="p-6">
-                    {children}
-                </div>
-            </section>
+
+                <main className="flex-1 overflow-y-auto pt-14 md:pt-0">
+                    <div className="p-6 lg:p-8">
+                        {children}
+                    </div>
+                </main>
+            </div>
         </div>
     )
 }

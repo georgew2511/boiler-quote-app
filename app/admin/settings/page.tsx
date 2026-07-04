@@ -26,10 +26,18 @@ export default function SettingsPage() {
         ga4_id: '',
         vat_registered: false,
         finance_enabled: true,
-        minimum_deposit: 500,
+        finance_deposit_percent: 10,
         apr: 11.9,
-        zero_percent_term_1: 12,
-        zero_percent_term_2: 24,
+        // Interest-bearing loan term toggles (months)
+        loan_term_12: false,
+        loan_term_24: false,
+        loan_term_36: false,
+        loan_term_48: false,
+        loan_term_60: true,
+        // 0% interest term toggles (months): 0 = off
+        zero_term_12: false,
+        zero_term_24: true,
+        zero_term_36: false,
         quote_validity_days: 30,
         workmanship_warranty_months: 12,
         google_reviews_url: '',
@@ -148,10 +156,26 @@ export default function SettingsPage() {
                 const data = await response.json()
 
                 if (data) {
+                    // Decode JSON finance_loan_terms into individual boolean toggles
+                    let loanTerms: number[] = [60]
+                    try {
+                        const parsed = JSON.parse(data.finance_loan_terms ?? '[]')
+                        if (Array.isArray(parsed)) loanTerms = parsed
+                    } catch {}
+
                     setSettings((prev) => ({
                         ...prev,
                         ...data,
                         company_name: company.company_name || prev.company_name,
+                        finance_deposit_percent: Number(data.finance_deposit_percent ?? 10),
+                        loan_term_12: loanTerms.includes(12),
+                        loan_term_24: loanTerms.includes(24),
+                        loan_term_36: loanTerms.includes(36),
+                        loan_term_48: loanTerms.includes(48),
+                        loan_term_60: loanTerms.includes(60),
+                        zero_term_12: Number(data.zero_percent_term_1) === 12 || Number(data.zero_percent_term_2) === 12 || Number(data.zero_percent_term_3) === 12,
+                        zero_term_24: Number(data.zero_percent_term_1) === 24 || Number(data.zero_percent_term_2) === 24 || Number(data.zero_percent_term_3) === 24,
+                        zero_term_36: Number(data.zero_percent_term_1) === 36 || Number(data.zero_percent_term_2) === 36 || Number(data.zero_percent_term_3) === 36,
                     }))
                 }
             } catch (error) {
@@ -199,8 +223,8 @@ export default function SettingsPage() {
                         </div>
 
                         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                            <p className="text-sm text-slate-500">Minimum Deposit</p>
-                            <p className="mt-2 text-xl font-bold">£{settings.minimum_deposit}</p>
+                            <p className="text-sm text-slate-500">Finance Deposit</p>
+                            <p className="mt-2 text-xl font-bold">{settings.finance_deposit_percent}%</p>
                         </div>
                     </div>
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -459,46 +483,99 @@ These events are automatically pushed by the quote calculator and can be connect
                         </div>
 
                         {settings.finance_enabled && (
-                        <div className="mt-6 grid gap-4 md:grid-cols-4">
-                            <div>
-                                <label className="mb-2 block font-medium">Minimum Deposit (£)</label>
-                                <input
-                                    type="number"
-                                    value={settings.minimum_deposit}
-                                    onChange={(e) => setSettings({ ...settings, minimum_deposit: Number(e.target.value) })}
-                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                />
+                        <div className="mt-6 space-y-6">
+                            {/* Deposit + APR */}
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <div>
+                                    <label className="mb-2 block font-medium">Deposit Required (%)</label>
+                                    <p className="mb-2 text-xs text-slate-400">Applies to both the online quote calculator and surveyor quotes.</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="1"
+                                            value={settings.finance_deposit_percent}
+                                            onChange={(e) => setSettings({ ...settings, finance_deposit_percent: Number(e.target.value) })}
+                                            className="w-28 rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
+                                        <span className="text-slate-500 font-medium">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="mb-2 block font-medium">Interest Rate (APR %)</label>
+                                    <p className="mb-2 text-xs text-slate-400">Used for interest-bearing loan calculations.</p>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            value={settings.apr}
+                                            onChange={(e) => setSettings({ ...settings, apr: Number(e.target.value) })}
+                                            className="w-28 rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
+                                        <span className="text-slate-500 font-medium">%</span>
+                                    </div>
+                                </div>
                             </div>
 
+                            {/* Interest-bearing loan terms */}
                             <div>
-                                <label className="mb-2 block font-medium">APR (%)</label>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    value={settings.apr}
-                                    onChange={(e) => setSettings({ ...settings, apr: Number(e.target.value) })}
-                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                />
+                                <label className="mb-2 block font-medium">Interest-Bearing Loan Terms</label>
+                                <p className="mb-3 text-xs text-slate-400">Select which loan durations to offer customers at the APR rate above.</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {([12, 24, 36, 48, 60] as const).map((m) => {
+                                        const key = `loan_term_${m}` as keyof typeof settings
+                                        const checked = !!settings[key]
+                                        return (
+                                            <button
+                                                key={m}
+                                                type="button"
+                                                onClick={() => setSettings({ ...settings, [key]: !checked })}
+                                                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                                                    checked
+                                                        ? 'border-blue-600 bg-blue-600 text-white'
+                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                                                }`}
+                                            >
+                                                {m} months
+                                            </button>
+                                        )
+                                    })}
+                                </div>
                             </div>
 
+                            {/* 0% interest terms */}
                             <div>
-                                <label className="mb-2 block font-medium">0% Term 1 (Months)</label>
-                                <input
-                                    type="number"
-                                    value={settings.zero_percent_term_1}
-                                    onChange={(e) => setSettings({ ...settings, zero_percent_term_1: Number(e.target.value) })}
-                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block font-medium">0% Term 2 (Months)</label>
-                                <input
-                                    type="number"
-                                    value={settings.zero_percent_term_2}
-                                    onChange={(e) => setSettings({ ...settings, zero_percent_term_2: Number(e.target.value) })}
-                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                />
+                                <label className="mb-2 block font-medium">0% Interest Terms</label>
+                                <p className="mb-3 text-xs text-slate-400">Select which durations to offer at 0% interest (e.g. buy now pay later).</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {([12, 24, 36] as const).map((m) => {
+                                        const key = `zero_term_${m}` as keyof typeof settings
+                                        const checked = !!settings[key]
+                                        return (
+                                            <button
+                                                key={m}
+                                                type="button"
+                                                onClick={() => setSettings({ ...settings, [key]: !checked })}
+                                                className={`rounded-xl border px-4 py-2 text-sm font-medium transition-colors ${
+                                                    checked
+                                                        ? 'border-emerald-600 bg-emerald-600 text-white'
+                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-600'
+                                                }`}
+                                            >
+                                                {m} months
+                                            </button>
+                                        )
+                                    })}
+                                    <button
+                                        type="button"
+                                        onClick={() => setSettings({ ...settings, zero_term_12: false, zero_term_24: false, zero_term_36: false })}
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-400 hover:border-red-200 hover:text-red-400 transition-colors"
+                                    >
+                                        None
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         )}
@@ -601,14 +678,36 @@ These events are automatically pushed by the quote calculator and can be connect
                                         return
                                     }
 
-                                    const response = await fetch('/api/settings/tracking', {
+                                    // Encode loan term toggles to DB columns
+                    const loanTerms: number[] = []
+                    if (settings.loan_term_12) loanTerms.push(12)
+                    if (settings.loan_term_24) loanTerms.push(24)
+                    if (settings.loan_term_36) loanTerms.push(36)
+                    if (settings.loan_term_48) loanTerms.push(48)
+                    if (settings.loan_term_60) loanTerms.push(60)
+
+                    const zeroTerms: (number | null)[] = [null, null, null]
+                    const zero: number[] = []
+                    if (settings.zero_term_12) zero.push(12)
+                    if (settings.zero_term_24) zero.push(24)
+                    if (settings.zero_term_36) zero.push(36)
+                    zero.forEach((v, i) => { zeroTerms[i] = v })
+
+                    const { loan_term_12, loan_term_24, loan_term_36, loan_term_48, loan_term_60,
+                            zero_term_12, zero_term_24, zero_term_36, ...rest } = settings
+
+                    const response = await fetch('/api/settings/tracking', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
                                         },
                                         body: JSON.stringify({
-                                            ...settings,
+                                            ...rest,
                                             company_id: companyId,
+                                            finance_loan_terms: JSON.stringify(loanTerms),
+                                            zero_percent_term_1: zeroTerms[0],
+                                            zero_percent_term_2: zeroTerms[1],
+                                            zero_percent_term_3: zeroTerms[2],
                                         }),
                                     })
 
