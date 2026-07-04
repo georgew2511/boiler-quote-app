@@ -4,57 +4,54 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID } from '@/lib/superAdmin'
 
-export async function getCurrentCompany() {
-    console.log('GET CURRENT COMPANY CALLED')
-    const supabaseAuth = await createClient()
-    console.log('SUPABASE SERVER CLIENT CREATED')
-    const {
-        data: { user },
-        error: userError,
-    } = await supabaseAuth.auth.getUser()
+export type MemberRole = 'owner' | 'admin' | 'surveyor' | 'viewer'
 
-    console.log('SERVER USER:', user)
-    console.log('AUTH USER ID:', user?.id)
-    console.log('SERVER USER ERROR:', userError)
+export async function getCurrentCompany() {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
 
     if (!user) {
-        redirect('/login')
+        redirect('/')
     }
 
-    const { data: companies, error } = await supabaseAuth
+    // Try owner first
+    const { data: ownedCompanies } = await supabaseAuth
         .from('companies')
         .select('*')
         .eq('owner_user_id', user.id)
 
-    console.log('MATCHING COMPANIES:', companies)
-    console.log('COMPANY ERROR:', error)
+    let realCompany: any = ownedCompanies?.[0] ?? null
+    let memberRole: MemberRole = 'owner'
 
-    if (error) {
-        throw new Error(`Failed to load company: ${error.message}`)
+    // If not an owner, check company_members
+    if (!realCompany) {
+        const adminClient = createAdminClient()
+        const { data: membership } = await adminClient
+            .from('company_members')
+            .select('company_id, role, companies(*)')
+            .eq('user_id', user.id)
+            .not('accepted_at', 'is', null)
+            .maybeSingle()
+
+        if (!membership) {
+            // No company and no membership — redirect to login
+            redirect('/')
+        }
+
+        realCompany = membership.companies as any
+        memberRole = membership.role as MemberRole
     }
 
-    if (!companies || companies.length === 0) {
-        throw new Error('No company found for this user')
-    }
-
-    const realCompany = companies[0]
     const isSuperAdmin = realCompany.id === SUPER_ADMIN_COMPANY_ID
 
-    // Records that this account is actively using the dashboard, so the
-    // inactivity-email cron can tell who's gone quiet. Uses the admin client
-    // (bypasses RLS) since this is internal bookkeeping, not user input —
-    // swallow errors so a missing column/table never breaks the page itself.
+    // Record activity (fire and forget)
     createAdminClient()
         .from('companies')
         .update({ last_seen_at: new Date().toISOString() })
         .eq('id', realCompany.id)
-        .then(({ error: lastSeenError }) => {
-            if (lastSeenError) console.error('Failed to update last_seen_at:', lastSeenError)
-        })
+        .then(({ error }) => { if (error) console.error('Failed to update last_seen_at:', error) })
 
-    // The super-admin account can "log in as" any company by setting a cookie.
-    // The cookie is only ever honoured for the super-admin's own login — anyone
-    // else's cookie value (however it got set) is ignored.
+    // Super-admin impersonation
     let company = realCompany
     let impersonating = false
 
@@ -76,24 +73,18 @@ export async function getCurrentCompany() {
         }
     }
 
-    const { data: settings, error: settingsError } = await supabaseAuth
+    // Fetch logo from company_settings
+    const adminClient = createAdminClient()
+    const { data: settings } = await adminClient
         .from('company_settings')
-        .select('*')
-        .eq('company_name', company.company_name)
-
-    console.log('SETTINGS:', settings)
-    console.log('SETTINGS ERROR:', settingsError)
-    console.log('COMPANY NAME:', company.company_name)
-
-    const settingsRecord = Array.isArray(settings)
-        ? settings.find((s: any) => s.logo_url)
-        : settings
-
-    const logoUrl = settingsRecord?.logo_url || null
+        .select('logo_url')
+        .eq('company_id', company.id)
+        .maybeSingle()
 
     return {
         ...company,
-        logo_url: logoUrl || null,
+        logo_url: settings?.logo_url ?? null,
+        memberRole,
         isSuperAdmin,
         isImpersonating: impersonating,
         realCompanyId: realCompany.id,

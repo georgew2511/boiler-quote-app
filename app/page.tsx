@@ -43,39 +43,40 @@ export default function LoginPage() {
 
             console.log('User ID:', user.id)
 
-            const { data: company, error: companyError } = await supabase
+            // Check owner account first
+            const { data: company } = await supabase
                 .from('companies')
-                .select('*')
+                .select('subscription_status')
                 .eq('owner_user_id', user.id)
+                .maybeSingle()
 
-            console.log('Company Result:', company)
-            console.log('Company Error:', companyError)
-
-            if (companyError) {
-                console.error(companyError)
-                alert(companyError.message)
+            if (company) {
+                if (
+                    company.subscription_status !== 'trial' &&
+                    company.subscription_status !== 'active'
+                ) {
+                    alert('Your subscription is not active. Please contact support.')
+                    return
+                }
+                router.push('/admin')
                 return
             }
 
-            if (!company || company.length === 0) {
-                alert('No company found')
+            // Not an owner — check if they are a company member
+            const { data: membership } = await supabase
+                .from('company_members')
+                .select('id, accepted_at')
+                .eq('user_id', user.id)
+                .not('accepted_at', 'is', null)
+                .maybeSingle()
+
+            if (membership) {
+                router.push('/admin')
                 return
             }
 
-            const companyRecord = company[0]
-
-            if (
-                companyRecord.subscription_status !== 'trial' &&
-                companyRecord.subscription_status !== 'active'
-            ) {
-                alert('Your subscription is not active')
-                return
-            }
-
-            await supabase.auth.getSession()
-
-            router.refresh()
-            router.push('/admin')
+            alert('No account found. Please contact your administrator.')
+            await supabase.auth.signOut()
         } catch (err) {
             console.error(err)
             alert('Login failed. Check the browser console for details.')
