@@ -20,6 +20,7 @@ interface SurveyorQuote {
     last_viewed_at: string | null
     view_count: number
     notes: string | null
+    surveyor_name: string | null
 }
 
 function relativeTime(iso: string | null): string {
@@ -114,6 +115,7 @@ export default function SurveyorQuotesPage() {
                         <thead className="bg-slate-50">
                             <tr>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Surveyor</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Postcode</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Good</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Better</th>
@@ -131,6 +133,11 @@ export default function SurveyorQuotesPage() {
                                     <td className="px-4 py-3">
                                         <p className="text-sm font-semibold text-slate-900">{q.customer_name}</p>
                                         <p className="text-xs text-slate-400">{q.customer_email}</p>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {q.surveyor_name
+                                            ? <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-700">{q.surveyor_name}</span>
+                                            : <span className="text-xs text-slate-300">Portal</span>}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-slate-600">{q.postcode}</td>
                                     <td className="px-4 py-3 text-right text-sm text-slate-700">{fmt(q.low_total)}</td>

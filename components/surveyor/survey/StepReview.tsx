@@ -9,6 +9,8 @@ interface Props {
   updateQuote: (r: QuoteResult) => void;
   boilers: Boiler[];
   companyId: string;
+  surveyorId?: string;
+  surveyorName?: string;
   vatRate?: number;
   onBack: () => void;
 }
@@ -33,7 +35,7 @@ function makeRecalc(vatRate: number) {
   };
 }
 
-export default function StepReview({ survey, quoteResult, updateQuote, boilers, companyId, vatRate = 0.20, onBack }: Props) {
+export default function StepReview({ survey, quoteResult, updateQuote, boilers, companyId, surveyorId, surveyorName, vatRate = 0.20, onBack }: Props) {
   const recalcTotals = makeRecalc(vatRate);
   const [activeTier, setActiveTier] = useState<Tier>("mid");
   const [hasEdited, setHasEdited] = useState(false);
@@ -95,7 +97,7 @@ export default function StepReview({ survey, quoteResult, updateQuote, boilers, 
     const res = await fetch("/api/surveyor/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ survey, quoteResult, companyId }),
+      body: JSON.stringify({ survey, quoteResult, companyId, surveyorId, surveyorName }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Failed to save quote");

@@ -21,7 +21,12 @@ interface Props {
   boilers: Boiler[];
   pricingItems: PricingItem[];
   companyId: string;
+  surveyorId?: string;
+  surveyorName?: string;
   vatRegistered?: boolean;
+  companyName?: string;
+  logoUrl?: string | null;
+  primaryColour?: string;
 }
 
 const STEP_LABELS = [
@@ -104,7 +109,7 @@ const DEFAULT_SURVEY: Partial<SurveyData> = {
   condensateFittings: [],
 };
 
-export default function SurveyWizard({ boilers, pricingItems, companyId, vatRegistered = true }: Props) {
+export default function SurveyWizard({ boilers, pricingItems, companyId, surveyorId, surveyorName, vatRegistered = true, companyName, logoUrl, primaryColour }: Props) {
   const [step, setStep] = useState(0);
   const [survey, setSurvey] = useState<Partial<SurveyData>>(DEFAULT_SURVEY);
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
@@ -138,9 +143,15 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, vatRegi
       {/* Header */}
       <header className="bg-white border-b border-slate-200 px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div>
-            <span className="text-xl font-bold text-blue-700">relode</span>
-            <span className="ml-2 text-sm text-slate-500">Survey Tool</span>
+          <div className="flex items-center gap-3">
+            {logoUrl ? (
+              <img src={logoUrl} alt={companyName ?? ''} className="h-8 max-w-[140px] object-contain object-left" />
+            ) : companyName ? (
+              <span className="text-base font-semibold text-slate-900">{companyName}</span>
+            ) : null}
+            {surveyorName && (
+              <span className="text-sm text-slate-400">· {surveyorName}</span>
+            )}
           </div>
           <span className="text-sm text-slate-400">
             Step {step + 1} of {STEP_LABELS.length}
@@ -205,6 +216,8 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, vatRegi
             updateQuote={updateQuote}
             boilers={boilers}
             companyId={companyId}
+            surveyorId={surveyorId}
+            surveyorName={surveyorName}
             vatRate={vatRegistered ? 0.20 : 0}
             onBack={back}
           />

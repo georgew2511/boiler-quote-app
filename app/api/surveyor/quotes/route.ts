@@ -18,7 +18,7 @@ Thank you for considering {company_name}.`
 
 export async function POST(req: NextRequest) {
     try {
-        const { survey, quoteResult, companyId } = await req.json()
+        const { survey, quoteResult, companyId, surveyorId, surveyorName } = await req.json()
 
         const supabase = createAdminClient()
 
@@ -54,6 +54,8 @@ export async function POST(req: NextRequest) {
                 status: 'SENT',
                 email_sent_at: new Date().toISOString(),
                 notes: survey.specialNotes ?? '',
+                surveyor_id: surveyorId ?? null,
+                surveyor_name: surveyorName ?? null,
             })
             .select('id')
             .single()
@@ -131,7 +133,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabase
             .from('surveyor_quotes')
-            .select('id, created_at, customer_name, customer_email, customer_phone, postcode, low_total, mid_total, high_total, status, email_sent_at, accepted_tier, accepted_at, last_viewed_at, view_count, notes')
+            .select('id, created_at, customer_name, customer_email, customer_phone, postcode, low_total, mid_total, high_total, status, email_sent_at, accepted_tier, accepted_at, last_viewed_at, view_count, notes, surveyor_id, surveyor_name')
             .order('created_at', { ascending: false })
 
         if (companyId) {

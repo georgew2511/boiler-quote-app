@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "boiler-quote-app",
+      "runtimeExecutable": "/Users/george/.nvm/versions/node/v26.3.0/bin/node",
+      "runtimeArgs": ["/Users/george/Desktop/boiler-quote-app/node_modules/.bin/next", "dev"],
+      "port": 3000
+    }
+  ]
+}
