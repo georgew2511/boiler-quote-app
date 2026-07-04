@@ -164,52 +164,93 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
       `}</style>
 
       {/* ── SAVE AS PDF BUTTON ── */}
-      <div className="no-print sticky top-0 z-20 bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+      <div className="no-print sticky top-0 z-20 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {settings.logoSlug
-            ? <img src={`/logos/${settings.logoSlug}`} alt={settings.companyName} className="h-8 object-contain" />
-            : <span className="text-lg font-bold" style={{ color }}>{settings.companyName}</span>
+            ? <img src={settings.logoSlug} alt={settings.companyName} className="h-7 sm:h-8 object-contain max-w-[120px] sm:max-w-none" />
+            : <span className="text-base sm:text-lg font-bold" style={{ color }}>{settings.companyName}</span>
           }
         </div>
         <button
           onClick={() => window.print()}
-          className="px-5 py-2 rounded-xl text-white text-sm font-semibold transition-all hover:opacity-90 brand-bg"
+          className="px-3 sm:px-5 py-2 rounded-xl text-white text-xs sm:text-sm font-semibold transition-all hover:opacity-90 brand-bg"
         >
           ⬇ Save as PDF
         </button>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6 print:px-0 print:py-0 print:max-w-none print:space-y-0">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-4 sm:py-8 space-y-4 sm:space-y-6 print:px-0 print:py-0 print:max-w-none print:space-y-0">
 
         {/* ══ HERO BANNER ══ */}
         <div className="rounded-2xl overflow-hidden shadow-md bg-white print:rounded-none print:shadow-none">
-          <div className="px-6 pt-6 pb-0 print:px-8 print:pt-8">
-            <div className="flex items-stretch justify-between gap-6">
+          <div className="px-4 pt-4 pb-0 sm:px-6 sm:pt-6 print:px-8 print:pt-8">
 
+            {/* ── Mobile hero layout ── */}
+            <div className="sm:hidden flex flex-col gap-3 pb-4">
+              {/* Logo */}
+              <div>
+                {settings.logoSlug
+                  ? <img src={settings.logoSlug} alt={settings.companyName} className="h-9 object-contain object-left" />
+                  : <span className="text-xl font-extrabold tracking-tight brand-text">{settings.companyName}</span>
+                }
+              </div>
+              {/* Price + boiler image side by side */}
+              <div className="flex items-end gap-3">
+                <div className="rounded-2xl p-3 text-center brand-row flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Your quote</p>
+                  <p className="text-2xl font-extrabold mt-0.5 brand-text">{fmt(quote.total)}</p>
+                  <p className="text-[10px] text-slate-400">inc. {settings.vatRegistered ? '20%' : '0%'} VAT</p>
+                </div>
+                {quote.boilerImageSlug && (
+                  <img src={quote.boilerImageSlug} alt={quote.boilerName} className="h-28 w-28 object-contain drop-shadow-lg flex-shrink-0" />
+                )}
+              </div>
+              {/* Finance teaser */}
+              {settings.financeEnabled && (
+                <div className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Exclusive offer</p>
+                    <p className="text-slate-800 font-extrabold">
+                      From <span className="text-xl brand-text">{fmt(lowestMonthly)}</span><span className="text-sm text-slate-600">/mo</span>
+                    </p>
+                    <p className="text-[10px] text-slate-400">{settings.financeApr}% APR · subject to status</p>
+                  </div>
+                  <div className="text-right text-xs text-slate-500">
+                    {settings.financeDepositPercent > 0
+                      ? <>{settings.financeDepositPercent}% deposit<br />required</>
+                      : <>No deposit<br />required</>}
+                  </div>
+                </div>
+              )}
+              {/* Accept CTA */}
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="no-print w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
+              >
+                Accept quote
+              </button>
+            </div>
+
+            {/* ── Desktop hero layout ── */}
+            <div className="hidden sm:flex items-stretch justify-between gap-6">
               {/* Left: logo + price */}
               <div className="flex flex-col gap-4 justify-between pb-6">
                 {settings.logoSlug
-                  ? <img src={`/logos/${settings.logoSlug}`} alt={settings.companyName} className="h-12 object-contain" />
+                  ? <img src={settings.logoSlug} alt={settings.companyName} className="h-12 object-contain" />
                   : <span className="text-2xl font-extrabold tracking-tight brand-text">{settings.companyName}</span>
                 }
                 <div className="rounded-2xl p-4 text-center min-w-[140px] brand-row">
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Your quote</p>
                   <p className="text-3xl font-extrabold mt-1 brand-text">{fmt(quote.total)}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">inc. 20% VAT</p>
+                  <p className="text-xs text-slate-400 mt-0.5">inc. {settings.vatRegistered ? '20%' : '0%'} VAT</p>
                 </div>
               </div>
-
-              {/* Centre: boiler image — flush to bottom */}
+              {/* Centre: boiler image */}
               {quote.boilerImageSlug && (
                 <div className="flex-1 flex items-end justify-center">
-                  <img
-                    src={`/boilers/${quote.boilerImageSlug}`}
-                    alt={quote.boilerName}
-                    className="h-44 object-contain drop-shadow-lg"
-                  />
+                  <img src={quote.boilerImageSlug} alt={quote.boilerName} className="h-44 object-contain drop-shadow-lg" />
                 </div>
               )}
-
               {/* Right: finance teaser + accept CTA */}
               <div className="text-right flex-shrink-0 max-w-[200px] flex flex-col justify-between pb-6">
                 {settings.financeEnabled && (
@@ -244,7 +285,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
           </div>
 
           {/* Customer details strip */}
-          <div className="bg-slate-50 border-t-4 brand-border px-6 py-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="bg-slate-50 border-t-4 brand-border px-4 sm:px-6 py-3 sm:py-4 grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-4">
             {[
               { label: "Name",     value: survey.customerName  },
               { label: "Postcode", value: survey.postcode      },
@@ -253,13 +294,13 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
             ].map(({ label, value }) => (
               <div key={label} className="text-center">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
-                <p className="text-sm font-semibold text-slate-800 truncate">{value}</p>
+                <p className="text-xs sm:text-sm font-semibold text-slate-800 truncate">{value}</p>
               </div>
             ))}
           </div>
 
           {/* Boiler model + ref */}
-          <div className="bg-slate-50 px-6 py-3 flex items-center justify-between text-sm border-t border-slate-100">
+          <div className="bg-slate-50 px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm border-t border-slate-100">
             <div>
               <span className="text-slate-500 font-medium">Boiler model: </span>
               <span className="font-semibold text-slate-800">{quote.boilerName}</span>
@@ -292,18 +333,18 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
 
           return (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-              <div className="brand-bg px-6 py-4">
+              <div className="brand-bg px-5 sm:px-6 py-4">
                 <h2 className="text-white font-bold text-base uppercase tracking-wide">Current Boiler Details</h2>
               </div>
               <div className="divide-y divide-slate-100">
                 {rows.map(([label, value]) => (
-                  <div key={label} className="flex items-center justify-between px-6 py-3">
+                  <div key={label} className="flex items-center justify-between px-4 sm:px-6 py-3">
                     <span className="text-sm text-slate-500">{label}</span>
                     <span className="text-sm font-semibold text-slate-800">{value}</span>
                   </div>
                 ))}
                 {removals.length > 0 && (
-                  <div className="flex items-start justify-between px-6 py-3 gap-4">
+                  <div className="flex items-start justify-between px-4 sm:px-6 py-3 gap-4">
                     <span className="text-sm text-slate-500">Items to be removed</span>
                     <span className="text-sm font-semibold text-slate-800 text-right">{removals.join(", ")}</span>
                   </div>
@@ -314,11 +355,11 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
         })()}
 
         {/* ══ TIER SWITCHER (web only) ══ */}
-        <div className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+        <div className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-4">
           <p className="text-xs text-slate-500 text-center mb-3 font-medium uppercase tracking-wide">
             Choose your preferred option — prices update instantly
           </p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {(["low", "mid", "high"] as Tier[]).map((t) => {
               const q = quoteResult[t];
               const isSelected = t === selectedTier;
@@ -326,23 +367,23 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                 <button
                   key={t}
                   onClick={() => setSelectedTier(t)}
-                  className={`rounded-xl p-4 text-center transition-all border-2 ${
+                  className={`rounded-xl p-2 sm:p-4 text-center transition-all border-2 ${
                     isSelected ? "shadow-md" : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
                   style={isSelected ? { borderColor: color, backgroundColor: `${color}10` } : {}}
                 >
                   <span
-                    className="text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                    className="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full text-white"
                     style={{ backgroundColor: isSelected ? color : "#94a3b8" }}
                   >
                     {TIER_LABELS[t]}
                   </span>
                   {q.boilerImageSlug && (
-                    <img src={`/boilers/${q.boilerImageSlug}`} alt={q.boilerName} className="w-14 h-14 object-contain mx-auto mt-2" />
+                    <img src={q.boilerImageSlug!} alt={q.boilerName} className="w-10 h-10 sm:w-14 sm:h-14 object-contain mx-auto mt-1.5 sm:mt-2" />
                   )}
-                  <p className="text-xs font-semibold mt-2 leading-tight text-slate-700">{q.boilerName}</p>
-                  <p className="text-xl font-extrabold mt-1 text-slate-900">{fmt(tierDisplayTotal(q))}</p>
-                  <p className="text-xs text-slate-400">inc. VAT</p>
+                  <p className="text-[10px] sm:text-xs font-semibold mt-1 sm:mt-2 leading-tight text-slate-700 line-clamp-2">{q.boilerName}</p>
+                  <p className="text-base sm:text-xl font-extrabold mt-0.5 sm:mt-1 text-slate-900">{fmt(tierDisplayTotal(q))}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-400">inc. VAT</p>
                 </button>
               );
             })}
@@ -405,10 +446,36 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
         {/* ══ FINANCE OPTIONS ══ */}
         {settings.financeEnabled && financeOptions.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="brand-bg px-6 py-4">
+            <div className="brand-bg px-5 sm:px-6 py-4">
               <h2 className="text-white font-bold text-base tracking-wide uppercase">Finance Options</h2>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile: cards */}
+            <div className="sm:hidden divide-y divide-slate-100">
+              {financeOptions.map((opt, i) => {
+                const deposit = quote.total * (settings.financeDepositPercent / 100);
+                const loanAmount = quote.total - deposit;
+                const monthly = monthlyPayment(loanAmount, opt.months, opt.apr);
+                const payable = totalPayable(loanAmount, opt.months, opt.apr) + deposit;
+                return (
+                  <div key={i} className={`px-4 py-4 finance-row-${Math.min(i, 2)}`}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <p className="text-sm font-semibold text-slate-800">{opt.label}</p>
+                      <p className="text-lg font-extrabold brand-text flex-shrink-0">{fmt(monthly)}<span className="text-xs font-normal text-slate-400">/mo</span></p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <span>Deposit: <strong className="text-slate-700">{fmt(deposit)}</strong></span>
+                      <span>APR: <strong className="text-slate-700">{opt.apr}%</strong></span>
+                      <span>Loan amount: <strong className="text-slate-700">{fmt(loanAmount)}</strong></span>
+                      <span>Total payable: <strong className="text-slate-700">{fmt(payable)}</strong></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop: table */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-slate-600 text-xs uppercase tracking-wide">
@@ -440,7 +507,8 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-slate-400 px-4 pb-3">Finance is subject to status and credit checks. Representative example only.</p>
+
+            <p className="text-xs text-slate-400 px-4 pb-3 pt-1">Finance is subject to status and credit checks. Representative example only.</p>
           </div>
         )}
 
@@ -488,14 +556,14 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
         {/* ══ CONTRACT DETAILS ══ */}
         {settings.contractDetails && (
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100">
+            <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
               <h2 className="font-bold text-slate-800 uppercase tracking-wide text-sm">Contract Details</h2>
             </div>
-            <div className="px-6 py-5 text-xs text-slate-600 leading-relaxed whitespace-pre-line">
+            <div className="px-4 sm:px-6 py-5 text-xs text-slate-600 leading-relaxed whitespace-pre-line">
               {settings.contractDetails}
             </div>
             {(settings.termsUrl || settings.privacyUrl) && (
-              <div className="px-6 pb-5 flex gap-4 text-xs">
+              <div className="px-4 sm:px-6 pb-5 flex gap-4 text-xs">
                 {settings.termsUrl && (
                   <a href={settings.termsUrl} target="_blank" className="brand-text underline">Terms & Conditions</a>
                 )}
@@ -505,7 +573,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
               </div>
             )}
             {(settings.companyNumber || settings.fcaNumber) && (
-              <div className="px-6 pb-5 text-xs text-slate-400">
+              <div className="px-4 sm:px-6 pb-5 text-xs text-slate-400">
                 {settings.companyNumber && <span>Company No: {settings.companyNumber} · </span>}
                 {settings.fcaNumber && <span>FCA Authorised: {settings.fcaNumber}</span>}
               </div>
@@ -515,22 +583,22 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
 
         {/* ══ ACCEPT QUOTE ══ */}
         <div className="no-print bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="brand-bg px-6 py-4">
+          <div className="brand-bg px-5 sm:px-6 py-4">
             <h2 className="text-white font-bold text-base tracking-wide uppercase">Accept Your Quote</h2>
           </div>
-          <div className="px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="px-4 sm:px-6 py-5 sm:py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-slate-800 font-semibold text-sm">
                 You've selected the <span className="font-extrabold">{tierLabel}</span> option — <span className="font-extrabold">{quote.boilerName}</span>
               </p>
               <p className="text-slate-500 text-sm mt-0.5">
-                Total: <span className="font-extrabold brand-text">{fmt(total)}</span> inc. 20% VAT
+                Total: <span className="font-extrabold brand-text">{fmt(total)}</span> inc. {settings.vatRegistered ? '20%' : '0%'} VAT
               </p>
               <p className="text-xs text-slate-400 mt-2">Clicking accept will notify {settings.companyName} and send you a confirmation email.</p>
             </div>
             <button
               onClick={() => setShowConfirm(true)}
-              className="flex-shrink-0 px-8 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
+              className="w-full sm:w-auto flex-shrink-0 px-8 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
             >
               Accept this quote
             </button>
@@ -538,14 +606,14 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
         </div>
 
         {/* ══ FOOTER ══ */}
-        <div className="brand-bg rounded-2xl text-white px-6 py-5 flex flex-wrap items-center justify-between gap-4 print:rounded-none">
-          <div className="flex items-center gap-4">
+        <div className="brand-bg rounded-2xl text-white px-4 sm:px-6 py-4 sm:py-5 flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 print:rounded-none">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             {settings.email && <span className="text-sm opacity-90">✉ {settings.email}</span>}
             {settings.phone && <span className="text-sm opacity-90">📞 {settings.phone}</span>}
           </div>
           {settings.logoSlug
-            ? <img src={`/logos/${settings.logoSlug}`} alt={settings.companyName} className="h-8 object-contain opacity-90" />
-            : <span className="text-lg font-extrabold opacity-90">{settings.companyName}</span>
+            ? <img src={settings.logoSlug} alt={settings.companyName} className="h-7 sm:h-8 object-contain opacity-90" />
+            : <span className="text-base sm:text-lg font-extrabold opacity-90">{settings.companyName}</span>
           }
         </div>
 
