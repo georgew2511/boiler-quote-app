@@ -88,6 +88,14 @@ export default function StepControlsFilter({ survey, update, onNext, onBack }: P
         </Field>
       )}
 
+      <Field label="Filling loop required?">
+        <Toggle
+          label={survey.fillingLoop ? "Yes — include filling loop" : "No — not required"}
+          checked={survey.fillingLoop ?? false}
+          onChange={(v) => update({ fillingLoop: v })}
+        />
+      </Field>
+
       <Field label="Magnetic filter size">
         <div className="flex gap-3">
           {FILTER_SIZES.map((s) => (

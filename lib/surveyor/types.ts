@@ -70,6 +70,7 @@ export interface SurveyData {
   smartControlsUpsell: boolean;
   smartControlsUpsellKey: string;
 
+  fillingLoop: boolean;
   powerflushupsell: boolean;
 
   gasRun: string;

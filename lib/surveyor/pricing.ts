@@ -93,6 +93,7 @@ export function computeLineItems(survey: SurveyData, pricing: Record<string, Pri
   }
 
   if (survey.filterModel) add(survey.filterModel);
+  if (survey.fillingLoop) add("system_filling_loop");
 
   if (survey.gasRun && survey.gasRun !== "none") add(survey.gasRun);
 

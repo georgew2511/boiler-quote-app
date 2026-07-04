@@ -47,6 +47,7 @@ const STEP_LABELS = [
 
 const DEFAULT_SURVEY: Partial<SurveyData> = {
   newBoilerType: "COMBI",
+  fillingLoop: false,
   conventionalToCombi: false,
   newLocation: false,
   newLocationDetails: "",
@@ -109,34 +110,51 @@ const DEFAULT_SURVEY: Partial<SurveyData> = {
   condensateFittings: [],
 };
 
+// Steps that are only relevant for system/regular boilers — skip for combi
+const COMBI_SKIP_STEPS = new Set([4, 5]); // Cylinder, System Components
+
 export default function SurveyWizard({ boilers, pricingItems, companyId, surveyorId, surveyorName, vatRegistered = true, companyName, logoUrl, primaryColour }: Props) {
   const [step, setStep] = useState(0);
   const [survey, setSurvey] = useState<Partial<SurveyData>>(DEFAULT_SURVEY);
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
 
   const pricingMap = Object.fromEntries(pricingItems.map((p) => [p.key, p]));
+  const isCombi = survey.newBoilerType === "COMBI";
 
   function update(patch: Partial<SurveyData>) {
     setSurvey((prev) => ({ ...prev, ...patch }));
   }
 
   function next() {
-    if (step === STEP_LABELS.length - 2) { // step 11 = Boilers
+    if (step === STEP_LABELS.length - 2) {
       const result = buildQuoteResult(survey as SurveyData, boilers, pricingMap, vatRegistered ? 0.20 : 0);
       setQuoteResult(result);
     }
-    setStep((s) => Math.min(s + 1, STEP_LABELS.length - 1));
+    let nextStep = step + 1;
+    while (isCombi && COMBI_SKIP_STEPS.has(nextStep) && nextStep < STEP_LABELS.length - 1) {
+      nextStep++;
+    }
+    setStep(Math.min(nextStep, STEP_LABELS.length - 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function back() {
-    setStep((s) => Math.max(s - 1, 0));
+    let prevStep = step - 1;
+    while (isCombi && COMBI_SKIP_STEPS.has(prevStep) && prevStep > 0) {
+      prevStep--;
+    }
+    setStep(Math.max(prevStep, 0));
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function updateQuote(result: QuoteResult) {
     setQuoteResult(result);
   }
+
+  // Visible steps — hide combi-irrelevant steps from progress bar
+  const visibleIndices = STEP_LABELS.map((_, i) => i).filter((i) => !isCombi || !COMBI_SKIP_STEPS.has(i));
+  const visibleStepNumber = visibleIndices.indexOf(step) + 1;
+  const visibleTotal = visibleIndices.length;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -154,7 +172,7 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, surveyo
             )}
           </div>
           <span className="text-sm text-slate-400">
-            Step {step + 1} of {STEP_LABELS.length}
+            Step {visibleStepNumber} of {visibleTotal}
           </span>
         </div>
       </header>
@@ -163,7 +181,7 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, surveyo
       <div className="bg-white border-b border-slate-100">
         <div className="max-w-3xl mx-auto px-6 py-3 overflow-x-auto">
           <div className="flex gap-1 min-w-max">
-            {STEP_LABELS.map((label, i) => (
+            {visibleIndices.map((i, vi) => (
               <div key={i} className="flex items-center">
                 <button
                   onClick={() => i < step && setStep(i)}
@@ -180,11 +198,11 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, surveyo
                       i < step ? "bg-blue-600 text-white" : i === step ? "bg-white text-blue-600" : "bg-slate-300 text-white"
                     }`}
                   >
-                    {i < step ? "✓" : i + 1}
+                    {i < step ? "✓" : vi + 1}
                   </span>
-                  {label}
+                  {STEP_LABELS[i]}
                 </button>
-                {i < STEP_LABELS.length - 1 && (
+                {vi < visibleIndices.length - 1 && (
                   <div className={`w-4 h-0.5 mx-0.5 ${i < step ? "bg-blue-300" : "bg-slate-200"}`} />
                 )}
               </div>

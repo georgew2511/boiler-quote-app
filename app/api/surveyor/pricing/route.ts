@@ -51,6 +51,7 @@ const DEFAULT_PRICING = [
     { category: 'SYSTEM', key: 'system_expansion_24L',             name: '24L Expansion Vessel',                   price: 62,    unit: 'each' },
     { category: 'SYSTEM', key: 'system_expansion_35L',             name: '35L Expansion Vessel',                   price: 78,    unit: 'each' },
     { category: 'SYSTEM', key: 'system_booster_pump',              name: 'Cold Water Mains Booster Pump',          price: 380,   unit: 'each' },
+    { category: 'SYSTEM', key: 'system_filling_loop',              name: 'Filling Loop',                            price: 15,    unit: 'each' },
     // CONTROLS
     { category: 'CONTROLS', key: 'ctrl_eph_wireless',              name: 'EPH Controller Wireless',                price: 65,    unit: 'each' },
     { category: 'CONTROLS', key: 'ctrl_hive_combi',                name: 'Hive Thermostat — Combi',                price: 145,   unit: 'each' },
