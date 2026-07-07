@@ -154,6 +154,10 @@ export interface CompanySettings {
   phone: string;
   email: string;
   website: string;
+  quoteValidityDays: number;
+  workmanshipWarrantyMonths: number;
+  googleReviewsUrl: string;
+  trustpilotUrl: string;
   vatRegistered: boolean;
   financeEnabled: boolean;
   financeApr: number;
@@ -161,6 +165,7 @@ export interface CompanySettings {
   financeZeroPercent: boolean;
   financeZeroPercentTerms: number[];
   financeLoanTerms: number[];
+  financeDisclosure: string;
   // Shown on customer quote page if populated (not yet editable in settings)
   whyChooseUs: string[];
   howToAccept: { method: string; detail: string }[];
@@ -242,6 +247,10 @@ export function mapCompanySettings(row: Record<string, any>): CompanySettings {
     phone: row.phone_number ?? "",
     email: row.email_address ?? "",
     website: row.website ?? "",
+    quoteValidityDays: Number(row.quote_validity_days ?? 30),
+    workmanshipWarrantyMonths: Number(row.workmanship_warranty_months ?? 12),
+    googleReviewsUrl: row.google_reviews_url ?? "",
+    trustpilotUrl: row.trustpilot_url ?? "",
     vatRegistered: row.vat_registered ?? false,
     financeEnabled: row.finance_enabled ?? true,
     financeApr: Number(row.apr ?? 9.9),
@@ -249,6 +258,7 @@ export function mapCompanySettings(row: Record<string, any>): CompanySettings {
     financeZeroPercent: zeroTerms.length > 0,
     financeZeroPercentTerms: zeroTerms.length > 0 ? zeroTerms : [24],
     financeLoanTerms: loanTerms,
+    financeDisclosure: row.finance_disclosure ?? "",
     whyChooseUs: [],
     howToAccept: [],
     contractDetails: "",
@@ -266,6 +276,10 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   phone: "",
   email: "",
   website: "",
+  quoteValidityDays: 30,
+  workmanshipWarrantyMonths: 12,
+  googleReviewsUrl: "",
+  trustpilotUrl: "",
   vatRegistered: true,
   financeEnabled: true,
   financeApr: 9.9,
@@ -273,6 +287,7 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   financeZeroPercent: true,
   financeZeroPercentTerms: [24],
   financeLoanTerms: [60, 120],
+  financeDisclosure: "",
   whyChooseUs: [],
   howToAccept: [],
   contractDetails: "",

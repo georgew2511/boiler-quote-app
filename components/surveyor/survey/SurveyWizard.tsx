@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Boiler, PricingItem, SurveyData, QuoteResult } from "@/lib/surveyor/types";
+import type { MarginMap } from "@/lib/surveyor/margins";
 import { buildQuoteResult } from "@/lib/surveyor/pricing";
 import StepCustomer from "./StepCustomer";
 import StepJobType from "./StepJobType";
@@ -24,6 +25,7 @@ interface Props {
   surveyorId?: string;
   surveyorName?: string;
   vatRegistered?: boolean;
+  margins?: MarginMap;
   companyName?: string;
   logoUrl?: string | null;
   primaryColour?: string;
@@ -113,7 +115,7 @@ const DEFAULT_SURVEY: Partial<SurveyData> = {
 // Steps that are only relevant for system/regular boilers — skip for combi
 const COMBI_SKIP_STEPS = new Set([4, 5]); // Cylinder, System Components
 
-export default function SurveyWizard({ boilers, pricingItems, companyId, surveyorId, surveyorName, vatRegistered = true, companyName, logoUrl, primaryColour }: Props) {
+export default function SurveyWizard({ boilers, pricingItems, companyId, surveyorId, surveyorName, vatRegistered = true, margins = {}, companyName, logoUrl, primaryColour }: Props) {
   const [step, setStep] = useState(0);
   const [survey, setSurvey] = useState<Partial<SurveyData>>(DEFAULT_SURVEY);
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
@@ -127,7 +129,7 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, surveyo
 
   function next() {
     if (step === STEP_LABELS.length - 2) {
-      const result = buildQuoteResult(survey as SurveyData, boilers, pricingMap, vatRegistered ? 0.20 : 0);
+      const result = buildQuoteResult(survey as SurveyData, boilers, pricingMap, vatRegistered ? 0.20 : 0, margins);
       setQuoteResult(result);
     }
     let nextStep = step + 1;

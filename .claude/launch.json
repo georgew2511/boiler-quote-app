@@ -3,8 +3,11 @@
   "configurations": [
     {
       "name": "boiler-quote-app",
-      "runtimeExecutable": "/Users/george/.nvm/versions/node/v26.3.0/bin/node",
-      "runtimeArgs": ["/Users/george/Desktop/boiler-quote-app/node_modules/.bin/next", "dev"],
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/george/Desktop/boiler-quote-app || { echo CD_FAILED; exit 3; }; unset PWD OLDPWD; exec /Users/george/.nvm/versions/node/v26.3.0/bin/node /Users/george/Desktop/boiler-quote-app/node_modules/next/dist/bin/next dev"
+      ],
       "port": 3000
     }
   ]

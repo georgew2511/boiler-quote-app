@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import SurveyWizard from '@/components/surveyor/survey/SurveyWizard'
 import { mapSupabaseBoiler } from '@/lib/surveyor/types'
 import type { Boiler, PricingItem } from '@/lib/surveyor/types'
+import { loadCategoryMargins } from '@/lib/surveyor/margins'
 
 export default async function SurveyPage() {
     const company = await getCurrentCompany()
@@ -25,6 +26,8 @@ export default async function SurveyPage() {
             .eq('company_id', company.id)
             .maybeSingle(),
     ])
+
+    const margins = await loadCategoryMargins(supabase, company.id)
 
     const boilers: Boiler[] = (rawBoilers ?? []).map(mapSupabaseBoiler)
     const pricingItems: PricingItem[] = (rawPricing ?? []).map((r: any) => ({
@@ -53,7 +56,7 @@ export default async function SurveyPage() {
                 </div>
             )}
             {hasPricing && (
-                <SurveyWizard boilers={boilers} pricingItems={pricingItems} companyId={company.id} vatRegistered={!!rawSettings?.vat_registered} />
+                <SurveyWizard boilers={boilers} pricingItems={pricingItems} companyId={company.id} vatRegistered={!!rawSettings?.vat_registered} margins={margins} />
             )}
         </div>
     )

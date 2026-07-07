@@ -1,6 +1,18 @@
 import type { SurveyData, LineItem, TieredQuote, QuoteResult, Boiler, PricingItem } from "./types";
+import type { MarginMap } from "./margins";
 
 const VAT_RATE = 0.20; // default; callers can override via vatRate param
+
+/**
+ * Mark up a cost price by the margin percentage configured for its category.
+ * Labour (and any category without a configured margin) is returned unchanged.
+ * Result is rounded to whole pence so displayed line items stay clean.
+ */
+function applyMargin(unitPrice: number, category: string, margins: MarginMap): number {
+  const pct = margins[category] ?? 0;
+  if (!pct) return unitPrice;
+  return Math.round(unitPrice * (1 + pct / 100) * 100) / 100;
+}
 
 function item(pricing: Record<string, PricingItem>, key: string, qty = 1): LineItem | null {
   const p = pricing[key];
@@ -150,19 +162,28 @@ export function buildTieredQuote(
   boilerId: string,
   boilers: Boiler[],
   lineItems: LineItem[],
-  vatRate: number = VAT_RATE
+  vatRate: number = VAT_RATE,
+  margins: MarginMap = {}
 ): TieredQuote {
   const boiler = boilers.find((b) => b.id === boilerId)!;
+  const boilerPrice = applyMargin(boiler.tradePrice, "BOILER", margins);
   const boilerItem: LineItem = {
     key: `boiler_${boilerId}`,
     name: `${boiler.name} — ${boiler.warrantyYears}-year warranty`,
     quantity: 1,
-    unitPrice: boiler.tradePrice,
-    total: boiler.tradePrice,
+    unitPrice: boilerPrice,
+    total: boilerPrice,
     category: "BOILER",
     editable: true,
   };
-  const allItems = [boilerItem, ...lineItems];
+  // Mark up each material line item by its category margin. Labour and any
+  // category with no margin set pass through unchanged.
+  const markedItems = lineItems.map((li) => {
+    const unitPrice = applyMargin(li.unitPrice, li.category, margins);
+    if (unitPrice === li.unitPrice) return li;
+    return { ...li, unitPrice, total: unitPrice * li.quantity };
+  });
+  const allItems = [boilerItem, ...markedItems];
   const subtotal = allItems.reduce((s, i) => s + i.total, 0);
   const vatAmount = subtotal * vatRate;
   return {
@@ -170,7 +191,7 @@ export function buildTieredQuote(
     boilerId,
     boilerName: boiler.name,
     boilerImageSlug: boiler.imageSlug ?? null,
-    boilerPrice: boiler.tradePrice,
+    boilerPrice,
     lineItems: allItems,
     subtotal,
     vatAmount,
@@ -182,12 +203,13 @@ export function buildQuoteResult(
   survey: SurveyData,
   boilers: Boiler[],
   pricing: Record<string, PricingItem>,
-  vatRate: number = VAT_RATE
+  vatRate: number = VAT_RATE,
+  margins: MarginMap = {}
 ): QuoteResult {
   const shared = computeLineItems(survey, pricing);
   return {
-    low:  buildTieredQuote("LOW",  survey.lowBoilerId,  boilers, shared, vatRate),
-    mid:  buildTieredQuote("MID",  survey.midBoilerId,  boilers, shared, vatRate),
-    high: buildTieredQuote("HIGH", survey.highBoilerId, boilers, shared, vatRate),
+    low:  buildTieredQuote("LOW",  survey.lowBoilerId,  boilers, shared, vatRate, margins),
+    mid:  buildTieredQuote("MID",  survey.midBoilerId,  boilers, shared, vatRate, margins),
+    high: buildTieredQuote("HIGH", survey.highBoilerId, boilers, shared, vatRate, margins),
   };
 }

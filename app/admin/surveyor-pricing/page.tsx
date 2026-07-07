@@ -2,11 +2,13 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { MARGIN_CATEGORIES, loadCategoryMargins } from '@/lib/surveyor/margins'
 
 // Human-readable labels + display order for the surveyor pricing categories.
 // Keys match the `category` column on surveyor_pricing_items (see the seed in
 // app/api/surveyor/pricing/route.ts and lib/surveyor/pricing.ts).
 const CATEGORY_LABELS: Record<string, string> = {
+    BOILER: 'Boiler',
     LABOUR: 'Labour',
     FLUE: 'Flue',
     CYLINDER: 'Cylinder',
@@ -83,6 +85,10 @@ export default async function SurveyorPricingPage({
 
     if (error) console.error(error)
 
+    // Per-category margin percentages, applied on top of the cost prices below
+    // when a surveyor builds a quote. `margins[category]` is undefined until set.
+    const margins = await loadCategoryMargins(supabase, company.id)
+
     const pricing: PricingRow[] = (rawPricing ?? []).map((r: any) => ({
         id: r.id,
         category: r.category,
@@ -112,6 +118,17 @@ export default async function SurveyorPricingPage({
                     .eq('company_id', company.id),
             ),
         )
+
+        // Persist per-category margin percentages. Missing/blank fields save as 0.
+        const marginRows = MARGIN_CATEGORIES.map((category) => ({
+            company_id: company.id,
+            category,
+            margin_percent: Math.max(0, Number(formData.get(`margin_${category}`) ?? 0) || 0),
+        }))
+        const { error: marginError } = await supabase
+            .from('surveyor_category_margins')
+            .upsert(marginRows, { onConflict: 'company_id,category' })
+        if (marginError) console.error('Failed to save margins:', marginError.message)
 
         redirect('/admin/surveyor-pricing?saved=1')
     }
@@ -170,6 +187,13 @@ export default async function SurveyorPricingPage({
                     . Untick an item to hide it from the surveyor tool without deleting its price.
                 </div>
 
+                <div className="mt-4 rounded-2xl bg-amber-50 px-5 py-3 text-sm text-amber-800">
+                    <strong>Material margin.</strong> Enter the <strong>cost prices</strong> above, then set a{' '}
+                    <strong>margin %</strong> per category to mark them up automatically on every surveyor quote. The
+                    margin is applied before VAT and is baked into each line item — customers never see it as a separate
+                    charge. Labour is never marked up. Leave a category at 0% to charge the cost price as-is.
+                </div>
+
                 {!hasPricing && (
                     <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
                         <h2 className="mb-1 text-lg font-semibold text-amber-800">No pricing items yet</h2>
@@ -201,11 +225,32 @@ export default async function SurveyorPricingPage({
                             </button>
                         </div>
 
+                        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-800">Boiler</h2>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Margin added to each boiler&apos;s trade price (set the trade prices in{' '}
+                                        <Link href="/admin/boilers" className="text-blue-600 hover:underline">
+                                            Boilers
+                                        </Link>
+                                        ).
+                                    </p>
+                                </div>
+                                <MarginField category="BOILER" value={margins.BOILER} />
+                            </div>
+                        </div>
+
                         {orderedCategories.map((category) => (
                             <div key={category} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                                <h2 className="mb-4 text-lg font-bold text-slate-800">
-                                    {CATEGORY_LABELS[category] || category}
-                                </h2>
+                                <div className="mb-4 flex items-center justify-between gap-4">
+                                    <h2 className="text-lg font-bold text-slate-800">
+                                        {CATEGORY_LABELS[category] || category}
+                                    </h2>
+                                    {category !== 'LABOUR' && (
+                                        <MarginField category={category} value={margins[category]} />
+                                    )}
+                                </div>
                                 <table className="w-full">
                                     <thead>
                                         <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400">
@@ -280,5 +325,24 @@ export default async function SurveyorPricingPage({
                 )}
             </div>
         </main>
+    )
+}
+
+function MarginField({ category, value }: { category: string; value?: number }) {
+    return (
+        <label className="flex items-center gap-2 whitespace-nowrap text-sm font-medium text-slate-600">
+            Margin
+            <span className="relative">
+                <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    defaultValue={value ?? 0}
+                    name={`margin_${category}`}
+                    className="w-24 rounded-2xl border border-slate-300 bg-white py-2 pl-3 pr-7 text-right shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">%</span>
+            </span>
+        </label>
     )
 }

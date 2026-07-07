@@ -18,6 +18,17 @@ function fmt(n: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
 }
 
+// Format a number of months as a friendly warranty label, e.g. 24 -> "2-year",
+// 18 -> "18-month". Returns "" when there's no warranty to show.
+function formatDuration(months: number): string {
+  if (!months || months <= 0) return "";
+  if (months % 12 === 0) {
+    const years = months / 12;
+    return `${years}-year`;
+  }
+  return `${months}-month`;
+}
+
 function monthlyPayment(total: number, months: number, aprPercent: number): number {
   if (aprPercent === 0) return total / months;
   const r = aprPercent / 12 / 100;
@@ -72,10 +83,32 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
     });
   }
 
+  const validityDays = settings.quoteValidityDays || 30;
   const expiryDate = new Date(createdAt);
-  expiryDate.setDate(expiryDate.getDate() + 30);
+  expiryDate.setDate(expiryDate.getDate() + validityDays);
   const expiryStr = expiryDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const quoteRef = quoteId.slice(-8).toUpperCase();
+
+  // Trust signals shown to the customer once they've received the quote.
+  const reviewsUrl = settings.googleReviewsUrl || settings.trustpilotUrl;
+  const reviewsAreTrustpilot = !settings.googleReviewsUrl && !!settings.trustpilotUrl;
+  const workmanshipLabel = formatDuration(settings.workmanshipWarrantyMonths);
+  // Manufacturer warranty is baked into the boiler line item name, e.g.
+  // "Worcester 4000 — 10-year warranty".
+  const boilerLine = rawQuote.lineItems.find((li) => li.category === "BOILER");
+  const manufacturerWarrantyYears = boilerLine?.name.match(/(\d+)-year warranty/)?.[1] ?? null;
+
+  const guarantees: { icon: string; label: string }[] = [
+    { icon: "🛡️", label: "Gas Safe registered engineers" },
+    ...(manufacturerWarrantyYears
+      ? [{ icon: "🏆", label: `${manufacturerWarrantyYears}-year manufacturer warranty` }]
+      : []),
+    ...(workmanshipLabel
+      ? [{ icon: "🔧", label: `${workmanshipLabel} workmanship guarantee` }]
+      : []),
+    { icon: "💷", label: "Fixed price — no hidden extras" },
+    { icon: "📅", label: `Price held until ${expiryStr}` },
+  ];
 
   // Build finance options from settings
   const financeOptions: { label: string; months: number; apr: number }[] = [];
@@ -347,6 +380,37 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
           </div>
         </div>
 
+        {/* ══ TRUST & GUARANTEES ══ */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 sm:py-5">
+            <p className="mb-3 text-center text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+              Why you&apos;re in safe hands
+            </p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {guarantees.map((g) => (
+                <span
+                  key={g.label}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-slate-50 px-3.5 py-2 text-xs font-medium text-slate-700 ring-1 ring-slate-200 sm:text-sm"
+                >
+                  <span aria-hidden>{g.icon}</span>
+                  {g.label}
+                </span>
+              ))}
+            </div>
+          </div>
+          {reviewsUrl && (
+            <a
+              href={reviewsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 border-t border-slate-100 px-4 py-3 text-sm font-semibold brand-text transition-colors hover:bg-slate-50"
+            >
+              <span className="tracking-tight text-amber-400">★★★★★</span>
+              Read our {reviewsAreTrustpilot ? "Trustpilot" : "Google"} reviews →
+            </a>
+          )}
+        </div>
+
         {/* ══ CURRENT BOILER DETAILS ══ */}
         {(survey.currentBoilerType || survey.currentFuelType) && (() => {
           const fuelLabel: Record<string, string> = { gas: "Gas (mains)", oil: "Oil", lpg: "LPG", electric: "Electric", none: "None" };
@@ -547,6 +611,12 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
             </div>
 
             <p className="text-xs text-slate-400 px-4 pb-3 pt-1">Finance is subject to status and credit checks. Representative example only.</p>
+
+            {settings.financeDisclosure && (
+              <div className="border-t border-slate-100 px-4 sm:px-6 py-4 text-[11px] leading-relaxed text-slate-400 whitespace-pre-line">
+                {settings.financeDisclosure}
+              </div>
+            )}
           </div>
         )}
 

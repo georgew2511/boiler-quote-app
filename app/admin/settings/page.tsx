@@ -28,6 +28,7 @@ export default function SettingsPage() {
         finance_enabled: true,
         finance_deposit_percent: 10,
         apr: 11.9,
+        finance_disclosure: '',
         // Interest-bearing loan term toggles (months)
         loan_term_12: false,
         loan_term_24: false,
@@ -42,8 +43,6 @@ export default function SettingsPage() {
         workmanship_warranty_months: 12,
         google_reviews_url: '',
         trustpilot_url: '',
-        quote_heading: '',
-        quote_subheading: '',
     })
 
     const handleLogoUpload = async (
@@ -577,11 +576,29 @@ These events are automatically pushed by the quote calculator and can be connect
                                     </button>
                                 </div>
                             </div>
+
+                            {/* FCA regulatory disclosure */}
+                            <div>
+                                <label className="mb-2 block font-medium">Finance Regulatory Disclosure</label>
+                                <p className="mb-3 text-xs text-slate-400">
+                                    Required by the FCA when you offer finance. Enter the exact wording your finance
+                                    provider requires — it shows in full at the bottom of the finance section on every
+                                    customer quote. Include your registered company name and address, company number,
+                                    your firm reference number, and your credit broker&apos;s details.
+                                </p>
+                                <textarea
+                                    rows={6}
+                                    value={settings.finance_disclosure}
+                                    onChange={(e) => setSettings({ ...settings, finance_disclosure: e.target.value })}
+                                    placeholder="e.g. [COMPANY NAME] LIMITED, registered address …, company number … is an Introducer Appointed Representative of [PROVIDER]. Our firm reference number is …. [PROVIDER] is a trading style of … authorised and regulated by the Financial Conduct Authority (firm reference number …). [PROVIDER] are a credit broker, not a lender … All loans are subject to status."
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm leading-relaxed shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
                         </div>
                         )}
                     </div>
 
-                    <div className="rounded-2xl border bg-white p-6">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Quote Settings</h2>
 
                         <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -625,27 +642,12 @@ These events are automatically pushed by the quote calculator and can be connect
                                     className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </div>
-
-                            <div>
-                                <label className="mb-2 block font-medium">Quote Calculator Heading</label>
-                                <input
-                                    type="text"
-                                    value={settings.quote_heading}
-                                    onChange={(e) => setSettings({ ...settings, quote_heading: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block font-medium">Quote Calculator Subheading</label>
-                                <input
-                                    type="text"
-                                    value={settings.quote_subheading}
-                                    onChange={(e) => setSettings({ ...settings, quote_subheading: e.target.value })}
-                                    className="w-full rounded-lg border px-4 py-3"
-                                />
-                            </div>
                         </div>
+
+                        <p className="mt-4 text-sm text-slate-500">
+                            These show on every quote your customers receive — the validity date, your workmanship
+                            guarantee, and a link to your reviews all appear automatically to build trust.
+                        </p>
                     </div>
 
                     <div className="flex justify-end">
