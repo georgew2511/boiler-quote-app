@@ -15,12 +15,12 @@ const SECTIONS: HelpSection[] = [
         content: (
             <>
                 <p>
-                    Welcome — this dashboard runs your online boiler quote calculator and lead pipeline.
-                    Customers visiting your website fill in a short quiz, get an instant fixed price, and
-                    can request a survey or upload photos — all without picking up the phone.
+                    Welcome — this dashboard runs two ways of quoting customers: an <strong>online quote
+                    calculator</strong> for your website, and a <strong>surveyor tool</strong> your team uses
+                    to build a fixed-price quote on-site during a survey.
                 </p>
                 <p>
-                    To get a working calculator live, work through these in order:
+                    To get the online calculator live, work through these in order:
                 </p>
                 <ol className="list-decimal space-y-2 pl-5">
                     <li>Add your boilers (or check the ones we pre-loaded for you) — <Link href="/admin/help?section=boilers" className="text-blue-600 hover:underline">Adding Your Boilers</Link></li>
@@ -31,6 +31,10 @@ const SECTIONS: HelpSection[] = [
                 </ol>
                 <p>
                     Once it's live, new enquiries land automatically in <Link href="/admin/leads" className="text-blue-600 hover:underline">Leads</Link>.
+                </p>
+                <p>
+                    If your team quotes on-site instead (or as well), see <Link href="/admin/help?section=surveyor-tool" className="text-blue-600 hover:underline">The Surveyor Tool</Link> to
+                    set up materials pricing and start sending on-site quotes.
                 </p>
             </>
         ),
@@ -143,6 +147,87 @@ const SECTIONS: HelpSection[] = [
                 </ol>
                 <p className="text-sm text-gray-500">
                     Not sure how to add embed code to your specific website builder (Wix, Squarespace, WordPress, etc.)? Get in touch and we'll help.
+                </p>
+            </>
+        ),
+    },
+    {
+        id: 'surveyor-tool',
+        label: 'The Surveyor Tool',
+        title: 'The Surveyor Tool',
+        content: (
+            <>
+                <p>
+                    The surveyor tool is for quoting on-site during a survey — your engineer answers questions
+                    about the job as they go, picks which boilers to offer, and sends (or hands over) a
+                    professional itemised quote before they've even left the house.
+                </p>
+                <ol className="list-decimal space-y-2 pl-5">
+                    <li>Set your materials and labour costs first — <Link href="/admin/help?section=surveyor-pricing" className="text-blue-600 hover:underline">Surveyor Pricing &amp; Margins</Link>.</li>
+                    <li>Start a quote from <Link href="/admin/survey" className="text-blue-600 hover:underline">New Survey Quote</Link>, or give each engineer their own personal link from <Link href="/admin/surveyors" className="text-blue-600 hover:underline">Surveyors</Link> so quotes are attributed to whoever created them.</li>
+                    <li>Work through the wizard — customer details, current boiler, job type, flue, system components, controls, pipework and so on. Steps that don't apply (e.g. cylinder questions on a combi swap) are skipped automatically.</li>
+                    <li>On the boiler step, select up to <strong>5 boilers</strong> to offer. They're shown to the customer cheapest to most expensive and labelled automatically — Good, Better, Best, and Premium/Elite if you add more than three.</li>
+                    <li>On the review screen, tap any price to adjust it for this customer, then <strong>Lock prices</strong> before sending. Editing a shared item (labour, controls, etc.) updates every option at once; editing one option's boiler price only affects that option.</li>
+                    <li>Preview the customer-facing quote, then email it directly — or hand your tablet over so they can review and accept it on the spot.</li>
+                </ol>
+                <p>
+                    Every quote sent is tracked in <Link href="/admin/surveyor-quotes" className="text-blue-600 hover:underline">Survey Quotes</Link>, showing
+                    how many options were offered, the price range, views, and whether — and which option — the customer accepted.
+                </p>
+            </>
+        ),
+    },
+    {
+        id: 'surveyor-pricing',
+        label: 'Surveyor Pricing & Margins',
+        title: 'Surveyor Pricing & Margins',
+        content: (
+            <>
+                <p>
+                    <Link href="/admin/surveyor-pricing" className="text-blue-600 hover:underline">Surveyor Pricing</Link> holds
+                    every material and labour cost the surveyor tool can add to a quote — flue kits, cylinders,
+                    system components, controls, filters, pipework, radiators, and more — grouped by category.
+                </p>
+                <ul className="list-disc space-y-2 pl-5">
+                    <li>Enter each item's <strong>cost price</strong> (what it costs you), excluding VAT. Untick an item to hide it from the surveyor tool without deleting its price.</li>
+                    <li>Set a <strong>margin %</strong> per category to mark cost prices up automatically on every quote — for example 20% on copper, 15% on controls. The margin is applied before VAT and baked straight into the line item, so customers never see it as a separate charge.</li>
+                    <li>The <strong>Boiler</strong> margin at the top applies to every boiler's trade price (set trade prices themselves in <Link href="/admin/boilers" className="text-blue-600 hover:underline">Boilers</Link>).</li>
+                    <li><strong>Labour is never marked up</strong> — there's no margin field for it, by design.</li>
+                </ul>
+                <p className="text-sm text-gray-500">
+                    Leave a category's margin at 0% to charge the cost price exactly as entered. Use <strong>Restore
+                    missing defaults</strong> if a new item type is added to the price list later — it only adds
+                    what's missing and never overwrites prices you've already set.
+                </p>
+            </>
+        ),
+    },
+    {
+        id: 'quote-trust',
+        label: 'Quote Settings & Finance',
+        title: 'Quote Settings & Finance',
+        content: (
+            <>
+                <p>
+                    A few settings under <Link href="/admin/settings" className="text-blue-600 hover:underline">Settings</Link> control
+                    what a customer sees on a surveyor quote beyond the price — these build trust and explain
+                    payment options.
+                </p>
+                <ul className="list-disc space-y-2 pl-5">
+                    <li><strong>Quote Validity (Days)</strong> and <strong>Workmanship Warranty (Months)</strong> — shown as a "Price held until…" date and a workmanship guarantee badge on every quote.</li>
+                    <li><strong>Google Reviews URL</strong> / <strong>Trustpilot URL</strong> — adds a star-rating link to your reviews near the top of the quote. Leave blank to hide it.</li>
+                </ul>
+                <p>
+                    Under <strong>Finance Settings</strong>, if finance is enabled the customer sees a live <strong>deposit
+                    slider</strong> — dragging it between your minimum required deposit and 90% instantly recalculates
+                    the deposit, loan amount and monthly payment for every finance option on their quote.
+                </p>
+                <p>
+                    If you offer finance, UK regulation requires a specific disclosure naming your Introducer
+                    Appointed Representative status, registered details and lender/broker information. Paste the
+                    exact wording your finance provider requires into <strong>Finance Regulatory Disclosure</strong> —
+                    it's shown in full at the bottom of the finance section on every quote. This varies by company
+                    and provider, so there's no default text; leave it blank if you don't offer finance.
                 </p>
             </>
         ),
