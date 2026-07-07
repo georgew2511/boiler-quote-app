@@ -90,7 +90,10 @@ export async function POST(request: Request) {
 
             // finance_disclosure column may not be migrated yet — retry the save
             // without it so the rest of the settings still persist.
-            if (error?.code === '42703' && 'finance_disclosure' in settingsData) {
+            // 42703 = undefined_column (raw Postgres), PGRST204 = PostgREST's
+            // "column not found in schema cache" — insert/update surface the
+            // latter, select() surfaces the former. Check both.
+            if ((error?.code === '42703' || error?.code === 'PGRST204') && 'finance_disclosure' in settingsData) {
                 const { finance_disclosure: _drop, ...rest } = settingsData
                 ;({ error } = await supabase
                     .from('company_settings')
@@ -107,7 +110,10 @@ export async function POST(request: Request) {
                 .from('company_settings')
                 .insert([{ ...settingsData, company_id }])
 
-            if (error?.code === '42703' && 'finance_disclosure' in settingsData) {
+            // 42703 = undefined_column (raw Postgres), PGRST204 = PostgREST's
+            // "column not found in schema cache" — insert/update surface the
+            // latter, select() surfaces the former. Check both.
+            if ((error?.code === '42703' || error?.code === 'PGRST204') && 'finance_disclosure' in settingsData) {
                 const { finance_disclosure: _drop, ...rest } = settingsData
                 ;({ error } = await supabase
                     .from('company_settings')
