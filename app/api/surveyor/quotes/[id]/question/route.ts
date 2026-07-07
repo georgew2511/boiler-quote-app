@@ -54,7 +54,10 @@ export async function POST(
         .single()
 
     const companyName = settings?.company_name ?? company?.company_name ?? 'Your Company'
-    const companyEmail = settings?.email_address ?? ''
+    // A question has nowhere to go without a recipient — fall back through the
+    // other configured addresses (mirrors the accept-route's replyTo fallback)
+    // before giving up, so a reply-to or sender address still works.
+    const companyEmail = settings?.email_address || settings?.reply_to_email || settings?.from_email || ''
     const fromEmail = settings?.from_email ?? process.env.RESEND_FROM_EMAIL ?? 'noreply@relode.io'
 
     if (!companyEmail) {

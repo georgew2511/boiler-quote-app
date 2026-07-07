@@ -178,7 +178,20 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: trimmed }),
       });
-      if (!res.ok) throw new Error("Request failed");
+      if (!res.ok) {
+        // 422 means the company hasn't set up a contact email yet — not a
+        // transient failure, so tell the customer to use the phone instead
+        // rather than "try again", which would just fail the same way.
+        if (res.status === 422) {
+          setQuestionError(
+            settings.phone
+              ? `${settings.companyName} hasn't finished setting up their online messaging yet. Please call them on ${settings.phone} instead.`
+              : `${settings.companyName} hasn't finished setting up their online messaging yet. Please contact them directly.`
+          );
+          return;
+        }
+        throw new Error("Request failed");
+      }
       setQuestionSent(true);
     } catch {
       setQuestionError("Something went wrong. Please try again or contact us directly.");
