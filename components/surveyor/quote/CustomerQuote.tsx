@@ -54,6 +54,9 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
   const [sendingQuestion, setSendingQuestion] = useState(false);
   const [questionSent, setQuestionSent] = useState(false);
   const [questionError, setQuestionError] = useState("");
+  // Deposit % the customer is currently exploring on the finance slider —
+  // starts at the company's minimum required deposit.
+  const [depositPercent, setDepositPercent] = useState(settings.financeDepositPercent);
 
   const rawQuote = quoteResult[selectedTier];
   const color = settings.primaryColor ?? "#1d4ed8";
@@ -113,8 +116,6 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
   // Build finance options from settings
   const financeOptions: { label: string; months: number; apr: number }[] = [];
   if (settings.financeEnabled) {
-    const deposit = quote.total * (settings.financeDepositPercent / 100);
-    const loanAmount = quote.total - deposit;
     for (const m of (settings.financeLoanTerms ?? [120, 60])) {
       financeOptions.push({
         label: `Personal Loan — ${m} months`,
@@ -133,12 +134,21 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
     }
     // sort longest term first (matches original order)
     financeOptions.sort((a, b) => b.months - a.months);
-    void loanAmount; // used below per-row
   }
+
+  // Deposit slider range — from the company's minimum required deposit up to
+  // 90%. If the minimum is already at/above that, there's nothing to explore
+  // so the slider is hidden and the deposit stays fixed at the minimum.
+  const minDepositPercent = Math.min(Math.max(settings.financeDepositPercent, 0), 90);
+  const maxDepositPercent = 90;
+  const canAdjustDeposit = maxDepositPercent > minDepositPercent;
+
+  const currentDeposit = quote.total * (depositPercent / 100);
+  const currentLoanAmount = quote.total - currentDeposit;
 
   const longestTerm = financeOptions[0]?.months ?? 120;
   const lowestMonthly = settings.financeEnabled
-    ? monthlyPayment(quote.total * (1 - (settings.financeDepositPercent / 100)), longestTerm, settings.financeApr)
+    ? monthlyPayment(currentLoanAmount, longestTerm, settings.financeApr)
     : 0;
 
   async function handleAccept() {
@@ -565,13 +575,43 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
               <h2 className="text-white font-bold text-base tracking-wide uppercase">Finance Options</h2>
             </div>
 
+            {/* ── DEPOSIT SLIDER ── */}
+            {canAdjustDeposit && (
+              <div className="no-print px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <label htmlFor="deposit-slider" className="text-sm font-semibold text-slate-700">
+                    Adjust your deposit
+                  </label>
+                  <span className="text-sm font-extrabold brand-text whitespace-nowrap">
+                    {fmt(currentDeposit)} <span className="font-medium text-slate-400">({depositPercent}%)</span>
+                  </span>
+                </div>
+                <input
+                  id="deposit-slider"
+                  type="range"
+                  min={minDepositPercent}
+                  max={maxDepositPercent}
+                  step={1}
+                  value={depositPercent}
+                  onChange={(e) => setDepositPercent(Number(e.target.value))}
+                  className="w-full cursor-pointer"
+                  style={{ accentColor: color }}
+                />
+                <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+                  <span>{minDepositPercent}% min</span>
+                  <span>{maxDepositPercent}%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  A bigger deposit means a smaller loan — drag to see how it lowers your monthly payments below.
+                </p>
+              </div>
+            )}
+
             {/* Mobile: cards */}
             <div className="sm:hidden divide-y divide-slate-100">
               {financeOptions.map((opt, i) => {
-                const deposit = quote.total * (settings.financeDepositPercent / 100);
-                const loanAmount = quote.total - deposit;
-                const monthly = monthlyPayment(loanAmount, opt.months, opt.apr);
-                const payable = totalPayable(loanAmount, opt.months, opt.apr) + deposit;
+                const monthly = monthlyPayment(currentLoanAmount, opt.months, opt.apr);
+                const payable = totalPayable(currentLoanAmount, opt.months, opt.apr) + currentDeposit;
                 return (
                   <div key={i} className={`px-4 py-4 finance-row-${Math.min(i, 2)}`}>
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -579,9 +619,9 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                       <p className="text-lg font-extrabold brand-text flex-shrink-0">{fmt(monthly)}<span className="text-xs font-normal text-slate-400">/mo</span></p>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500">
-                      <span>Deposit: <strong className="text-slate-700">{fmt(deposit)}</strong></span>
+                      <span>Deposit: <strong className="text-slate-700">{fmt(currentDeposit)}</strong></span>
                       <span>APR: <strong className="text-slate-700">{opt.apr}%</strong></span>
-                      <span>Loan amount: <strong className="text-slate-700">{fmt(loanAmount)}</strong></span>
+                      <span>Loan amount: <strong className="text-slate-700">{fmt(currentLoanAmount)}</strong></span>
                       <span>Total payable: <strong className="text-slate-700">{fmt(payable)}</strong></span>
                     </div>
                   </div>
@@ -604,15 +644,13 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                 </thead>
                 <tbody>
                   {financeOptions.map((opt, i) => {
-                    const deposit = quote.total * (settings.financeDepositPercent / 100);
-                    const loanAmount = quote.total - deposit;
-                    const monthly = monthlyPayment(loanAmount, opt.months, opt.apr);
-                    const payable = totalPayable(loanAmount, opt.months, opt.apr) + deposit;
+                    const monthly = monthlyPayment(currentLoanAmount, opt.months, opt.apr);
+                    const payable = totalPayable(currentLoanAmount, opt.months, opt.apr) + currentDeposit;
                     return (
                       <tr key={i} className={`finance-row-${Math.min(i, 2)} border-t border-slate-100`}>
                         <td className="px-4 py-3 font-medium text-slate-800">{opt.label}</td>
-                        <td className="px-4 py-3 text-center text-slate-600">{fmt(deposit)}</td>
-                        <td className="px-4 py-3 text-center text-slate-600">{fmt(loanAmount)}</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{fmt(currentDeposit)}</td>
+                        <td className="px-4 py-3 text-center text-slate-600">{fmt(currentLoanAmount)}</td>
                         <td className="px-4 py-3 text-center text-slate-600">{fmt(payable)}</td>
                         <td className="px-4 py-3 text-center text-slate-600">{opt.apr}%</td>
                         <td className="px-4 py-3 text-right font-extrabold brand-text text-base">{fmt(monthly)}</td>
