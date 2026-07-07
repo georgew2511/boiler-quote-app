@@ -49,6 +49,7 @@ const STEP_LABELS = [
 
 const DEFAULT_SURVEY: Partial<SurveyData> = {
   newBoilerType: "COMBI",
+  selectedBoilerIds: [],
   fillingLoop: false,
   conventionalToCombi: false,
   newLocation: false,

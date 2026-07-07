@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { normalizeQuoteResult } from '@/lib/surveyor/types'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -8,7 +9,7 @@ const DEFAULT_TEMPLATE = `Hi {customer_name},
 
 Thank you for receiving your boiler installation quote from {company_name}!
 
-You have been sent three options (Good, Better, Best) to review at your convenience. Simply click your preferred option to accept.
+You have been sent {option_count} to review at your convenience. Simply click your preferred option to accept.
 
 If you have any questions, please don't hesitate to contact us:
 📞 {phone}
@@ -35,6 +36,8 @@ export async function POST(req: NextRequest) {
             .eq('company_id', companyId)
             .maybeSingle()
 
+        const totals: number[] = quoteResult.options.map((o: { total: number }) => o.total)
+
         const { data: quote, error } = await supabase
             .from('surveyor_quotes')
             .insert({
@@ -45,12 +48,12 @@ export async function POST(req: NextRequest) {
                 postcode: survey.postcode,
                 survey_data: survey,
                 line_items: quoteResult,
-                low_boiler_id: survey.lowBoilerId,
-                mid_boiler_id: survey.midBoilerId,
-                high_boiler_id: survey.highBoilerId,
-                low_total: quoteResult.low.total,
-                mid_total: quoteResult.mid.total,
-                high_total: quoteResult.high.total,
+                // Legacy columns from the fixed 3-tier model — kept populated
+                // (using min/max across however many options were chosen) so
+                // older admin views and reports that read them don't break.
+                low_total: Math.min(...totals),
+                high_total: Math.max(...totals),
+                mid_total: totals[Math.floor((totals.length - 1) / 2)],
                 status: 'SENT',
                 email_sent_at: new Date().toISOString(),
                 notes: survey.specialNotes ?? '',
@@ -75,11 +78,15 @@ export async function POST(req: NextRequest) {
 
         const quoteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.relode.io'}/q/${quoteId}`
 
+        const optionCount = quoteResult.options.length
+        const optionCountLabel = optionCount === 1 ? 'a boiler option' : `${optionCount} boiler options`
+
         const emailBody = DEFAULT_TEMPLATE
             .replace(/\{customer_name\}/g, survey.customerName)
             .replace(/\{company_name\}/g, companyName)
             .replace(/\{phone\}/g, companyPhone)
             .replace(/\{email\}/g, companyEmail)
+            .replace(/\{option_count\}/g, optionCountLabel)
 
         const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -133,7 +140,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabase
             .from('surveyor_quotes')
-            .select('id, created_at, customer_name, customer_email, customer_phone, postcode, low_total, mid_total, high_total, status, email_sent_at, accepted_tier, accepted_at, last_viewed_at, view_count, notes, surveyor_id, surveyor_name')
+            .select('id, created_at, customer_name, customer_email, customer_phone, postcode, low_total, high_total, line_items, status, email_sent_at, accepted_tier, accepted_at, last_viewed_at, view_count, notes, surveyor_id, surveyor_name')
             .order('created_at', { ascending: false })
 
         if (companyId) {
@@ -142,7 +149,16 @@ export async function GET(req: NextRequest) {
 
         const { data, error } = await query
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-        return NextResponse.json(data)
+
+        // Derive the option count from line_items rather than trusting a fixed
+        // column — older quotes are still in the {low,mid,high} shape.
+        const withOptionCounts = (data ?? []).map((row: any) => {
+            const { line_items, ...rest } = row
+            const optionCount = normalizeQuoteResult(line_items).options.length
+            return { ...rest, option_count: optionCount }
+        })
+
+        return NextResponse.json(withOptionCounts)
     } catch (e) {
         console.error(e)
         return NextResponse.json({ error: 'Failed to fetch quotes' }, { status: 500 })

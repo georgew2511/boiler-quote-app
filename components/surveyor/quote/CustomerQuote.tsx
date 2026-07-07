@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { QuoteResult, TieredQuote, SurveyData, CompanySettings } from "@/lib/surveyor/types";
+import type { QuoteResult, SurveyData, CompanySettings } from "@/lib/surveyor/types";
 import QuoteInstallationSummary from "@/components/surveyor/quote/QuoteInstallationSummary";
 
 interface Props {
@@ -11,8 +11,6 @@ interface Props {
   createdAt: string;
   settings: CompanySettings;
 }
-
-type Tier = "low" | "mid" | "high";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n);
@@ -39,11 +37,10 @@ function totalPayable(total: number, months: number, aprPercent: number): number
   return monthlyPayment(total, months, aprPercent) * months;
 }
 
-
-const TIER_LABELS: Record<Tier, string> = { low: "Good", mid: "Better", high: "Best" };
-
 export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt, settings }: Props) {
-  const [selectedTier, setSelectedTier] = useState<Tier>("mid");
+  const options = quoteResult.options;
+  // Default to a middle option so a 3-boiler quote still opens on "Better" as before.
+  const [selectedIndex, setSelectedIndex] = useState(() => Math.floor((options.length - 1) / 2));
   const [activeUpsells, setActiveUpsells] = useState<Set<string>>(new Set());
   const [showConfirm, setShowConfirm] = useState(false);
   const [accepting, setAccepting] = useState(false);
@@ -58,7 +55,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
   // starts at the company's minimum required deposit.
   const [depositPercent, setDepositPercent] = useState(settings.financeDepositPercent);
 
-  const rawQuote = quoteResult[selectedTier];
+  const rawQuote = options[selectedIndex];
   const color = settings.primaryColor ?? "#1d4ed8";
 
   const upsellItems = rawQuote.lineItems.filter((li) => li.upsell);
@@ -159,7 +156,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          tier: selectedTier.toUpperCase(),
+          optionLabel: quote.label,
           boilerName: quote.boilerName,
           total,
         }),
@@ -220,8 +217,6 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
     }, 200);
   }
 
-  const tierLabel = selectedTier === "low" ? "Good" : selectedTier === "mid" ? "Better" : "Best";
-
   if (accepted) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
@@ -231,7 +226,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
           </div>
           <h1 className="text-2xl font-extrabold text-slate-800 mb-2">Quote accepted!</h1>
           <p className="text-slate-500 text-sm mb-4">
-            Thank you, <strong>{survey.customerName}</strong>. You've accepted the <strong>{tierLabel}</strong> option — <strong>{quote.boilerName}</strong> for <strong>{fmt(total)}</strong>.
+            Thank you, <strong>{survey.customerName}</strong>. You've accepted the <strong>{quote.label}</strong> option — <strong>{quote.boilerName}</strong> for <strong>{fmt(total)}</strong>.
           </p>
           <p className="text-slate-500 text-sm">
             A confirmation has been sent to <strong>{survey.customerEmail}</strong>. A member of the {settings.companyName} team will be in touch shortly.
@@ -484,14 +479,13 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
           <p className="text-xs text-slate-500 text-center mb-3 font-medium uppercase tracking-wide">
             Choose your preferred option — prices update instantly
           </p>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            {(["low", "mid", "high"] as Tier[]).map((t) => {
-              const q = quoteResult[t];
-              const isSelected = t === selectedTier;
+          <div className="grid gap-2 sm:gap-3" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))" }}>
+            {options.map((q, i) => {
+              const isSelected = i === selectedIndex;
               return (
                 <button
-                  key={t}
-                  onClick={() => setSelectedTier(t)}
+                  key={q.boilerId}
+                  onClick={() => setSelectedIndex(i)}
                   className={`rounded-xl p-2 sm:p-4 text-center transition-all border-2 ${
                     isSelected ? "shadow-md" : "border-slate-200 bg-white hover:border-slate-300"
                   }`}
@@ -501,7 +495,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                     className="text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 rounded-full text-white"
                     style={{ backgroundColor: isSelected ? color : "#94a3b8" }}
                   >
-                    {TIER_LABELS[t]}
+                    {q.label}
                   </span>
                   {q.boilerImageSlug && (
                     <img src={q.boilerImageSlug!} alt={q.boilerName} className="w-10 h-10 sm:w-14 sm:h-14 object-contain mx-auto mt-1.5 sm:mt-2" />
@@ -748,7 +742,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
           <div className="px-4 sm:px-6 py-5 sm:py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p className="text-slate-800 font-semibold text-sm">
-                You've selected the <span className="font-extrabold">{tierLabel}</span> option — <span className="font-extrabold">{quote.boilerName}</span>
+                You've selected the <span className="font-extrabold">{quote.label}</span> option — <span className="font-extrabold">{quote.boilerName}</span>
               </p>
               <p className="text-slate-500 text-sm mt-0.5">
                 Total: <span className="font-extrabold brand-text">{fmt(total)}</span> inc. {settings.vatRegistered ? '20%' : '0%'} VAT
@@ -792,7 +786,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
             <h2 className="text-lg font-extrabold text-slate-800 mb-2">Confirm your choice</h2>
             <p className="text-sm text-slate-600 mb-1">
-              You're accepting the <strong>{tierLabel}</strong> option:
+              You're accepting the <strong>{quote.label}</strong> option:
             </p>
             <p className="text-sm font-semibold text-slate-800 mb-1">{quote.boilerName}</p>
             <p className="text-xl font-extrabold brand-text mb-4">{fmt(total)} <span className="text-sm font-normal text-slate-400">inc. VAT</span></p>

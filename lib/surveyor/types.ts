@@ -33,9 +33,9 @@ export interface SurveyData {
   condensatePipeRun: string;
   condensateFittings: string[];
 
-  lowBoilerId: string;
-  midBoilerId: string;
-  highBoilerId: string;
+  // Boilers the surveyor has chosen to present to the customer, in selection
+  // order (pricing.ts re-sorts these cheapest-to-priciest before labeling).
+  selectedBoilerIds: string[];
 
   flueBrand: string;
   flueKit: string;
@@ -114,8 +114,9 @@ export interface LineItem {
   upsell?: boolean;
 }
 
-export interface TieredQuote {
-  tier: BoilerTier;
+/** A single boiler option presented to the customer, priced end-to-end. */
+export interface QuoteOption {
+  label: string;
   boilerId: string;
   boilerName: string;
   boilerImageSlug: string | null;
@@ -126,10 +127,42 @@ export interface TieredQuote {
   total: number;
 }
 
+/** @deprecated kept as an alias while older code migrates to QuoteOption */
+export type TieredQuote = QuoteOption;
+
 export interface QuoteResult {
-  low: TieredQuote;
-  mid: TieredQuote;
-  high: TieredQuote;
+  options: QuoteOption[];
+}
+
+export const MAX_QUOTE_OPTIONS = 5;
+
+// Friendly labels assigned by price rank (cheapest first). Chosen so the
+// existing 3-option default reads exactly as before (Good/Better/Best).
+const OPTION_LABEL_SEQUENCE = ["Good", "Better", "Best", "Premium", "Elite"];
+
+/** Labels for `count` options, cheapest to most expensive. */
+export function labelsForOptionCount(count: number): string[] {
+  if (count <= 0) return [];
+  if (count === 1) return ["Standard"];
+  if (count <= OPTION_LABEL_SEQUENCE.length) return OPTION_LABEL_SEQUENCE.slice(0, count);
+  return Array.from({ length: count }, (_, i) => OPTION_LABEL_SEQUENCE[i] ?? `Option ${i + 1}`);
+}
+
+/**
+ * Normalizes a QuoteResult that may still be in the old `{ low, mid, high }`
+ * shape (quotes saved before flexible boiler options shipped) into the
+ * current `{ options }` shape, so existing quote links keep working.
+ */
+export function normalizeQuoteResult(raw: any): QuoteResult {
+  if (raw && Array.isArray(raw.options)) return raw as QuoteResult;
+  if (raw && (raw.low || raw.mid || raw.high)) {
+    const legacyLabels: Record<string, string> = { low: "Good", mid: "Better", high: "Best" };
+    const options = (["low", "mid", "high"] as const)
+      .filter((k) => raw[k])
+      .map((k) => ({ ...raw[k], label: legacyLabels[k] }));
+    return { options };
+  }
+  return { options: [] };
 }
 
 export interface Boiler {

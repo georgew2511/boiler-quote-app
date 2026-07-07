@@ -23,7 +23,7 @@ export async function POST(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params
-    const { tier, boilerName, total } = await req.json()
+    const { optionLabel, boilerName, total } = await req.json()
 
     const supabase = createAdminClient()
 
@@ -40,7 +40,9 @@ export async function POST(
     await supabase
         .from('surveyor_quotes')
         .update({
-            accepted_tier: tier,
+            // accepted_tier historically stored LOW/MID/HIGH; now stores the
+            // option's friendly label directly (e.g. "Better", "Premium").
+            accepted_tier: optionLabel,
             accepted_at: new Date().toISOString(),
             status: 'ACCEPTED',
         })
@@ -65,7 +67,7 @@ export async function POST(
     const replyTo = (settings?.reply_to_email ?? companyEmail) || undefined
 
     const quoteRef = id.slice(-8).toUpperCase()
-    const tierLabel = tier === 'LOW' ? 'Good' : tier === 'MID' ? 'Better' : 'Best'
+    const tierLabel = optionLabel || 'selected'
 
     const customerName = quote.customer_name
     const customerEmail = quote.customer_email

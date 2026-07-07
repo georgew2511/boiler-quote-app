@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/utils/supabase/admin'
 import CustomerQuote from '@/components/surveyor/quote/CustomerQuote'
-import { mapCompanySettings, DEFAULT_SETTINGS } from '@/lib/surveyor/types'
-import type { QuoteResult, SurveyData } from '@/lib/surveyor/types'
+import { mapCompanySettings, DEFAULT_SETTINGS, normalizeQuoteResult } from '@/lib/surveyor/types'
+import type { SurveyData } from '@/lib/surveyor/types'
 
 interface Props {
     params: Promise<{ id: string }>
@@ -38,7 +38,9 @@ export default async function CustomerQuotePage({ params }: Props) {
         .eq('company_id', record.company_id)
         .maybeSingle()
 
-    const quoteResult: QuoteResult = record.line_items as QuoteResult
+    // Older quotes were saved in the fixed {low,mid,high} shape — normalize so
+    // links sent before flexible boiler options shipped still render.
+    const quoteResult = normalizeQuoteResult(record.line_items)
     const survey: SurveyData = record.survey_data as SurveyData
     const settings = rawSettings ? mapCompanySettings(rawSettings) : DEFAULT_SETTINGS
 

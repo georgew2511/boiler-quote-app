@@ -11,8 +11,8 @@ interface SurveyorQuote {
     customer_phone: string
     postcode: string
     low_total: number
-    mid_total: number
     high_total: number
+    option_count: number
     status: string
     email_sent_at: string | null
     accepted_tier: string | null
@@ -117,9 +117,8 @@ export default function SurveyorQuotesPage() {
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Surveyor</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Postcode</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Good</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Better</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Best</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Options</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Price range</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Sent</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Last viewed</th>
                                 <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Views</th>
@@ -140,9 +139,10 @@ export default function SurveyorQuotesPage() {
                                             : <span className="text-xs text-slate-300">Portal</span>}
                                     </td>
                                     <td className="px-4 py-3 text-sm text-slate-600">{q.postcode}</td>
-                                    <td className="px-4 py-3 text-right text-sm text-slate-700">{fmt(q.low_total)}</td>
-                                    <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">{fmt(q.mid_total)}</td>
-                                    <td className="px-4 py-3 text-right text-sm text-slate-700">{fmt(q.high_total)}</td>
+                                    <td className="px-4 py-3 text-center text-sm text-slate-700">{q.option_count}</td>
+                                    <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">
+                                        {q.low_total === q.high_total ? fmt(q.low_total) : `${fmt(q.low_total)} – ${fmt(q.high_total)}`}
+                                    </td>
                                     <td className="px-4 py-3 text-xs text-slate-500">{relativeTime(q.email_sent_at ?? q.created_at)}</td>
                                     <td className="px-4 py-3 text-xs text-slate-500">{relativeTime(q.last_viewed_at)}</td>
                                     <td className="px-4 py-3 text-center">
@@ -158,7 +158,9 @@ export default function SurveyorQuotesPage() {
                                         <StatusBadge status={q.accepted_tier ? 'ACCEPTED' : q.view_count > 0 ? 'VIEWED' : q.status} />
                                         {q.accepted_tier && (
                                             <p className="mt-0.5 text-xs text-green-600">
-                                                {q.accepted_tier === 'LOW' ? 'Good' : q.accepted_tier === 'MID' ? 'Better' : 'Best'}
+                                                {/* accepted_tier stores the option's friendly label directly now
+                                                    (e.g. "Better"); older accepted quotes still have LOW/MID/HIGH. */}
+                                                {q.accepted_tier === 'LOW' ? 'Good' : q.accepted_tier === 'MID' ? 'Better' : q.accepted_tier === 'HIGH' ? 'Best' : q.accepted_tier}
                                             </p>
                                         )}
                                     </td>

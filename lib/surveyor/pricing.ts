@@ -1,4 +1,5 @@
-import type { SurveyData, LineItem, TieredQuote, QuoteResult, Boiler, PricingItem } from "./types";
+import type { SurveyData, LineItem, QuoteOption, QuoteResult, Boiler, PricingItem } from "./types";
+import { MAX_QUOTE_OPTIONS, labelsForOptionCount } from "./types";
 import type { MarginMap } from "./margins";
 
 const VAT_RATE = 0.20; // default; callers can override via vatRate param
@@ -157,14 +158,14 @@ export function computeLineItems(survey: SurveyData, pricing: Record<string, Pri
   return items;
 }
 
-export function buildTieredQuote(
-  tier: "LOW" | "MID" | "HIGH",
+export function buildQuoteOption(
+  label: string,
   boilerId: string,
   boilers: Boiler[],
   lineItems: LineItem[],
   vatRate: number = VAT_RATE,
   margins: MarginMap = {}
-): TieredQuote {
+): QuoteOption {
   const boiler = boilers.find((b) => b.id === boilerId)!;
   const boilerPrice = applyMargin(boiler.tradePrice, "BOILER", margins);
   const boilerItem: LineItem = {
@@ -187,7 +188,7 @@ export function buildTieredQuote(
   const subtotal = allItems.reduce((s, i) => s + i.total, 0);
   const vatAmount = subtotal * vatRate;
   return {
-    tier,
+    label,
     boilerId,
     boilerName: boiler.name,
     boilerImageSlug: boiler.imageSlug ?? null,
@@ -207,9 +208,20 @@ export function buildQuoteResult(
   margins: MarginMap = {}
 ): QuoteResult {
   const shared = computeLineItems(survey, pricing);
-  return {
-    low:  buildTieredQuote("LOW",  survey.lowBoilerId,  boilers, shared, vatRate, margins),
-    mid:  buildTieredQuote("MID",  survey.midBoilerId,  boilers, shared, vatRate, margins),
-    high: buildTieredQuote("HIGH", survey.highBoilerId, boilers, shared, vatRate, margins),
-  };
+
+  // De-dupe, drop anything that no longer matches a real boiler, cap at the
+  // max, then sort cheapest-to-priciest so labels are assigned by price rank.
+  const validIds = Array.from(new Set(survey.selectedBoilerIds ?? []))
+    .filter((id) => boilers.some((b) => b.id === id))
+    .slice(0, MAX_QUOTE_OPTIONS)
+    .sort((a, b) => {
+      const pa = boilers.find((x) => x.id === a)!.tradePrice;
+      const pb = boilers.find((x) => x.id === b)!.tradePrice;
+      return pa - pb;
+    });
+
+  const labels = labelsForOptionCount(validIds.length);
+  const options = validIds.map((id, i) => buildQuoteOption(labels[i], id, boilers, shared, vatRate, margins));
+
+  return { options };
 }
