@@ -38,6 +38,11 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
   const [accepting, setAccepting] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [acceptError, setAcceptError] = useState("");
+  const [showQuestion, setShowQuestion] = useState(false);
+  const [questionText, setQuestionText] = useState("");
+  const [sendingQuestion, setSendingQuestion] = useState(false);
+  const [questionSent, setQuestionSent] = useState(false);
+  const [questionError, setQuestionError] = useState("");
 
   const rawQuote = quoteResult[selectedTier];
   const color = settings.primaryColor ?? "#1d4ed8";
@@ -124,6 +129,39 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
     } finally {
       setAccepting(false);
     }
+  }
+
+  async function handleSendQuestion() {
+    const trimmed = questionText.trim();
+    if (!trimmed) {
+      setQuestionError("Please type your question first.");
+      return;
+    }
+    setSendingQuestion(true);
+    setQuestionError("");
+    try {
+      const res = await fetch(`/api/surveyor/quotes/${quoteId}/question`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: trimmed }),
+      });
+      if (!res.ok) throw new Error("Request failed");
+      setQuestionSent(true);
+    } catch {
+      setQuestionError("Something went wrong. Please try again or contact us directly.");
+    } finally {
+      setSendingQuestion(false);
+    }
+  }
+
+  function closeQuestion() {
+    setShowQuestion(false);
+    // Reset after the modal has closed so the user can ask another question later.
+    setTimeout(() => {
+      setQuestionSent(false);
+      setQuestionText("");
+      setQuestionError("");
+    }, 200);
   }
 
   const tierLabel = selectedTier === "low" ? "Good" : selectedTier === "mid" ? "Better" : "Best";
@@ -596,12 +634,20 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
               </p>
               <p className="text-xs text-slate-400 mt-2">Clicking accept will notify {settings.companyName} and send you a confirmation email.</p>
             </div>
-            <button
-              onClick={() => setShowConfirm(true)}
-              className="w-full sm:w-auto flex-shrink-0 px-8 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
-            >
-              Accept this quote
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 sm:items-center flex-shrink-0">
+              <button
+                onClick={() => setShowQuestion(true)}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-sm transition-all hover:bg-slate-50 active:scale-95 border-2 brand-border brand-text"
+              >
+                Ask a question
+              </button>
+              <button
+                onClick={() => setShowConfirm(true)}
+                className="w-full sm:w-auto px-8 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
+              >
+                Accept this quote
+              </button>
+            </div>
           </div>
         </div>
 
@@ -649,6 +695,65 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                 {accepting ? "Sending…" : "Confirm & accept"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ASK A QUESTION MODAL ── */}
+      {showQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            {questionSent ? (
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl brand-bg text-white">
+                  ✓
+                </div>
+                <h2 className="text-lg font-extrabold text-slate-800 mb-2">Question sent</h2>
+                <p className="text-sm text-slate-600 mb-5">
+                  Thanks — your question has been sent to {settings.companyName}. They&apos;ll get back to you
+                  {survey.customerEmail ? <> at <strong>{survey.customerEmail}</strong></> : null} as soon as they can.
+                </p>
+                <button
+                  onClick={closeQuestion}
+                  className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 brand-bg"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-extrabold text-slate-800 mb-1">Ask a question</h2>
+                <p className="text-sm text-slate-600 mb-4">
+                  Not sure about something on your quote? Send {settings.companyName} a message and they&apos;ll get back to you.
+                </p>
+                <textarea
+                  value={questionText}
+                  onChange={(e) => setQuestionText(e.target.value)}
+                  rows={5}
+                  maxLength={5000}
+                  autoFocus
+                  placeholder="Type your question here…"
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-slate-400 resize-none"
+                />
+                {questionError && <p className="text-sm text-red-600 mt-3">{questionError}</p>}
+                <div className="flex gap-3 mt-5">
+                  <button
+                    onClick={closeQuestion}
+                    disabled={sendingQuestion}
+                    className="flex-1 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold text-sm hover:border-slate-300 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendQuestion}
+                    disabled={sendingQuestion}
+                    className="flex-1 py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 disabled:opacity-60 brand-bg"
+                  >
+                    {sendingQuestion ? "Sending…" : "Send question"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

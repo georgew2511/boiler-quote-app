@@ -51,9 +51,10 @@ const GROUPS: NavGroup[] = [
         label: 'Surveyor Tool',
         icon: 'survey',
         items: [
-            { href: '/admin/survey',           label: 'New Survey Quote', icon: 'survey' },
-            { href: '/admin/surveyor-quotes',  label: 'Survey Quotes',    icon: 'quotes' },
-            { href: '/admin/surveyors',        label: 'Surveyors',        icon: 'leads' },
+            { href: '/admin/survey',           label: 'New Survey Quote',  icon: 'survey' },
+            { href: '/admin/surveyor-pricing', label: 'Surveyor Pricing',  icon: 'pricing' },
+            { href: '/admin/surveyor-quotes',  label: 'Survey Quotes',     icon: 'quotes' },
+            { href: '/admin/surveyors',        label: 'Surveyors',         icon: 'leads' },
         ],
     },
 ]

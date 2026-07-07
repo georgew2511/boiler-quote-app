@@ -147,9 +147,11 @@ export async function POST(req: NextRequest) {
         const supabase = createAdminClient()
         const rows = DEFAULT_PRICING.map((p) => ({ ...p, company_id: companyId, active: true }))
 
+        // ignoreDuplicates so seeding only inserts items that don't already exist
+        // for this company — it never overwrites prices the admin has edited.
         const { error } = await supabase
             .from('surveyor_pricing_items')
-            .upsert(rows, { onConflict: 'company_id,key' })
+            .upsert(rows, { onConflict: 'company_id,key', ignoreDuplicates: true })
 
         if (error) {
             return NextResponse.json({ error: error.message }, { status: 500 })
