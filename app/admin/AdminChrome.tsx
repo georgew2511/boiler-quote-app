@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import SidebarNav from './SidebarNav'
+import ReportProblemButton from './ReportProblemButton'
 
 export default function AdminChrome({
     companyName,
@@ -108,6 +109,8 @@ export default function AdminChrome({
                     </div>
                 </main>
             </div>
+
+            <ReportProblemButton />
         </div>
     )
 }
