@@ -125,6 +125,14 @@ export default function SignupPage() {
                     return
                 }
             }
+
+            fetch('/api/notify-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ companyName, ownerName: name, email, phone }),
+            }).catch(() => {
+                // Best-effort — the account is already created either way.
+            })
         }
 
         alert('Account created successfully. Please check your email and verify your account before signing in.')
