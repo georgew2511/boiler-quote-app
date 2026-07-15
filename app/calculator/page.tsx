@@ -582,76 +582,14 @@ function CalculatorContent() {
           : 'combi'
 
 
-  const bathsLabel = answers.bathtubs?.label || ''
-  const showersLabel = answers.showers?.label || ''
-  const radsLabel = answers.radiators?.label || ''
-
-  let targetOutputs: number[] = []
-
-  if (targetCategory === 'combi') {
-    const hasZeroBaths = bathsLabel.includes('0 bathtub')
-    const hasOneBath = bathsLabel.includes('1 bathtub')
-
-    const hasLargeHotWaterDemand =
-      bathsLabel.includes('2 bathtubs') ||
-      bathsLabel.includes('3 +')
-
-    const lowRadiators =
-      radsLabel.includes('0-5') ||
-      radsLabel.includes('6 - 9')
-
-    if (
-      hasZeroBaths &&
-      showersLabel.includes('1 shower') &&
-      lowRadiators
-    ) {
-      targetOutputs = [25]
-    } else if (hasOneBath) {
-      targetOutputs = [30]
-    } else if (
-      hasLargeHotWaterDemand &&
-      showersLabel.includes('2 +')
-    ) {
-      targetOutputs = [36]
-    } else {
-      // Fallback: Always select a combi output when converting to combi
-      targetOutputs = [30]
-    }
-  }
-
-  if (targetCategory === 'system' || targetCategory === 'regular') {
-    if (radsLabel === '0-5 radiators') {
-      targetOutputs = [12, 15]
-    } else if (radsLabel === '6 - 9 radiators') {
-      targetOutputs = [18, 21]
-    } else if (radsLabel === '10 - 13 radiators') {
-      targetOutputs = [24, 27]
-    } else if (radsLabel === '14 - 16 radiators') {
-      targetOutputs = [24, 27]
-    } else if (radsLabel === '17 + radiators') {
-      targetOutputs = [30, 35]
-    }
-  }
-
-  console.log('Radiator label:', radsLabel)
-  console.log('Target outputs:', targetOutputs)
-  console.log('Current sundries value:', pricingData.sundries)
-  console.log('Current modifiers value:', modifiers)
-  console.log('COMPANY ID:', companyId)
-  console.log('LOADED BOILERS:', boilers)
-
+  // Every active boiler in the matched category is shown — same principle
+  // as the surveyor tool's boiler step, which never filters by output and
+  // just lets the engineer pick from the whole category. Requiring an exact
+  // output match here used to silently hide any boiler whose kW didn't land
+  // on one of a few hardcoded numbers, even though it was visible and
+  // selectable everywhere else in the app.
   const recommendedBoilers = boilers
-    .filter((boiler) => {
-      if (boiler.category !== targetCategory) {
-        return false
-      }
-
-      if (targetOutputs.length === 0) {
-        return true
-      }
-
-      return targetOutputs.includes(Number(boiler.output))
-    })
+    .filter((boiler) => boiler.category === targetCategory)
     .map((boiler) => {
       const exVatPrice =
         Number(boiler.price || 0) +
