@@ -66,6 +66,8 @@ export default async function AdminLayout({
             isImpersonating={company.isImpersonating}
             overCap={overCap}
             tierName={tier.name}
+            onboardingStep={company.onboarding_step ?? 0}
+            onboardingDismissed={!!company.onboarding_dismissed || company.isSuperAdmin}
         >
             {children}
         </AdminChrome>

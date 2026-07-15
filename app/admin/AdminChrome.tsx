@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import SidebarNav from './SidebarNav'
 import ReportProblemButton from './ReportProblemButton'
+import OnboardingGuide from './OnboardingGuide'
 
 export default function AdminChrome({
     companyName,
@@ -13,6 +14,8 @@ export default function AdminChrome({
     isImpersonating,
     overCap,
     tierName,
+    onboardingStep,
+    onboardingDismissed,
     children,
 }: {
     companyName: string
@@ -22,6 +25,8 @@ export default function AdminChrome({
     isImpersonating: boolean
     overCap: boolean
     tierName: string
+    onboardingStep: number
+    onboardingDismissed: boolean
     children: React.ReactNode
 }) {
     const [mobileOpen, setMobileOpen] = useState(false)
@@ -111,6 +116,7 @@ export default function AdminChrome({
             </div>
 
             <ReportProblemButton />
+            <OnboardingGuide initialStep={onboardingStep} initialDismissed={onboardingDismissed} />
         </div>
     )
 }
