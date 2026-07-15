@@ -29,11 +29,21 @@ export const LOST_STAGE: PipelineStage = {
 export const ALL_STAGES: PipelineStage[] = [...PIPELINE_STAGES, LOST_STAGE]
 
 export const LOST_REASONS = [
-    'Price too high',
-    'Went with another company',
-    'Changed mind / no longer needed',
-    'Unresponsive',
-    'Other',
+    'Availability',
+    'Repaired boiler',
+    'Brand',
+    'Cancelled by customer',
+    'Duplicate',
+    'Fake Details',
+    'Failed Finance',
+    'Guarantee period length',
+    'Out of area',
+    'Poor service',
+    'Price',
+    'Supply Only',
+    'Unable to reach',
+    'Research',
+    'No reason given',
 ]
 
 export function getStageDefinition(stageKey: string | null | undefined): PipelineStage {

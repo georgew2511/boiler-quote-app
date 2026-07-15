@@ -4,11 +4,11 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import {
     ALL_STAGES,
-    LOST_REASONS,
     STALE_AFTER_DAYS,
     isLeadStale,
 } from '@/lib/pipelineStages'
 import { updateLeadStage } from './actions'
+import DisqualifyModal from './DisqualifyModal'
 
 interface KanbanLead {
     id: number
@@ -29,12 +29,10 @@ export default function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
     const [isPending, startTransition] = useTransition()
     const [draggingId, setDraggingId] = useState<number | null>(null)
     const [lostModalLeadId, setLostModalLeadId] = useState<number | null>(null)
-    const [lostReason, setLostReason] = useState(LOST_REASONS[0])
 
     function moveLead(leadId: number, stage: string) {
         if (stage === 'Lost') {
             setLostModalLeadId(leadId)
-            setLostReason(LOST_REASONS[0])
             return
         }
 
@@ -43,12 +41,12 @@ export default function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
         })
     }
 
-    function confirmLost() {
+    function confirmLost(reason: string, note: string) {
         if (lostModalLeadId === null) return
 
         const leadId = lostModalLeadId
         startTransition(() => {
-            updateLeadStage(leadId, 'Lost', lostReason)
+            updateLeadStage(leadId, 'Lost', reason, note)
         })
         setLostModalLeadId(null)
     }
@@ -192,41 +190,10 @@ export default function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
             </div>
 
             {lostModalLeadId !== null && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
-                        <h3 className="text-lg font-bold text-slate-900">Mark lead as lost</h3>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Why was this lead lost? This helps you spot patterns later.
-                        </p>
-
-                        <select
-                            value={lostReason}
-                            onChange={(e) => setLostReason(e.target.value)}
-                            className="mt-4 w-full rounded-xl border border-slate-300 px-4 py-3"
-                        >
-                            {LOST_REASONS.map((reason) => (
-                                <option key={reason} value={reason}>
-                                    {reason}
-                                </option>
-                            ))}
-                        </select>
-
-                        <div className="mt-5 flex justify-end gap-3">
-                            <button
-                                onClick={() => setLostModalLeadId(null)}
-                                className="rounded-xl border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={confirmLost}
-                                className="rounded-xl bg-rose-600 px-4 py-2 font-semibold text-white hover:bg-rose-700"
-                            >
-                                Mark as Lost
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <DisqualifyModal
+                    onCancel={() => setLostModalLeadId(null)}
+                    onConfirm={confirmLost}
+                />
             )}
         </>
     )

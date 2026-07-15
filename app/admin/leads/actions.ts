@@ -7,7 +7,8 @@ import { getCurrentCompany } from '@/lib/getcurrentcompany'
 export async function updateLeadStage(
     leadId: number,
     stage: string,
-    lostReason?: string
+    lostReason?: string,
+    disqualifyNote?: string
 ) {
     const company = await getCurrentCompany()
     const supabase = await createClient()
@@ -21,6 +22,17 @@ export async function updateLeadStage(
         update.lost_reason = lostReason || null
     } else {
         update.lost_reason = null
+    }
+
+    if (stage === 'Lost' && disqualifyNote?.trim()) {
+        const { data: existing } = await supabase
+            .from('leads')
+            .select('notes')
+            .eq('id', leadId)
+            .single()
+
+        const entry = `[${new Date().toLocaleString('en-GB')}] Disqualified — ${disqualifyNote.trim()}`
+        update.notes = existing?.notes ? `${existing.notes}\n${entry}` : entry
     }
 
     const { error } = await supabase
