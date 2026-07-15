@@ -164,18 +164,32 @@ export default function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
                                                 )}
                                             </div>
 
-                                            <select
-                                                value={lead.pipeline_stage || 'New Lead'}
-                                                onChange={(e) => moveLead(lead.id, e.target.value)}
-                                                disabled={isPending}
-                                                className="mt-3 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs"
-                                            >
-                                                {ALL_STAGES.map((s) => (
-                                                    <option key={s.key} value={s.key}>
-                                                        {s.label}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                            <div className="mt-3 flex items-center gap-2">
+                                                <select
+                                                    value={lead.pipeline_stage || 'New Lead'}
+                                                    onChange={(e) => moveLead(lead.id, e.target.value)}
+                                                    disabled={isPending}
+                                                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs"
+                                                >
+                                                    {ALL_STAGES.map((s) => (
+                                                        <option key={s.key} value={s.key}>
+                                                            {s.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+
+                                                {stage.key !== 'Lost' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setLostModalLeadId(lead.id)}
+                                                        disabled={isPending}
+                                                        title="Disqualify"
+                                                        className="flex-shrink-0 rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-100"
+                                                    >
+                                                        Disqualify
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )
                                 })}

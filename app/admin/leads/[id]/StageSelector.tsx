@@ -49,6 +49,17 @@ export default function StageSelector({
                 ))}
             </select>
 
+            {currentStage !== 'Lost' && (
+                <button
+                    type="button"
+                    onClick={() => setShowLostModal(true)}
+                    disabled={isPending}
+                    className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-100"
+                >
+                    Disqualify
+                </button>
+            )}
+
             {showLostModal && (
                 <DisqualifyModal
                     onCancel={() => setShowLostModal(false)}
