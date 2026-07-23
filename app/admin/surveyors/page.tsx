@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/utils/supabase/client'
 
 interface Surveyor {
     id: string
@@ -15,8 +14,6 @@ interface Surveyor {
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.relode.io'
 
 export default function SurveyorsPage() {
-    const supabase = createClient()
-    const [companyId, setCompanyId] = useState<string | null>(null)
     const [surveyors, setSurveyors] = useState<Surveyor[]>([])
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
@@ -26,41 +23,27 @@ export default function SurveyorsPage() {
 
     useEffect(() => {
         const load = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-
-            const { data: company } = await supabase
-                .from('companies')
-                .select('id')
-                .eq('owner_user_id', user.id)
-                .single()
-
-            if (!company) return
-            setCompanyId(company.id)
-
-            const { data } = await supabase
-                .from('surveyors')
-                .select('id, name, email, token, active, created_at')
-                .eq('company_id', company.id)
-                .order('created_at', { ascending: false })
-
-            setSurveyors(data ?? [])
+            const res = await fetch('/api/surveyor/surveyors')
+            if (res.ok) {
+                setSurveyors(await res.json())
+            }
             setLoading(false)
         }
         load()
     }, [])
 
     async function addSurveyor() {
-        if (!newName.trim() || !companyId) return
+        if (!newName.trim()) return
         setAdding(true)
 
-        const { data, error } = await supabase
-            .from('surveyors')
-            .insert({ company_id: companyId, name: newName.trim(), email: newEmail.trim() || null })
-            .select('id, name, email, token, active, created_at')
-            .single()
+        const res = await fetch('/api/surveyor/surveyors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName.trim(), email: newEmail.trim() || null }),
+        })
 
-        if (!error && data) {
+        if (res.ok) {
+            const data = await res.json()
             setSurveyors((prev) => [data, ...prev])
             setNewName('')
             setNewEmail('')
@@ -69,14 +52,22 @@ export default function SurveyorsPage() {
     }
 
     async function toggleActive(id: string, current: boolean) {
-        await supabase.from('surveyors').update({ active: !current }).eq('id', id)
-        setSurveyors((prev) => prev.map((s) => s.id === id ? { ...s, active: !current } : s))
+        const res = await fetch(`/api/surveyor/surveyors/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: !current }),
+        })
+        if (res.ok) {
+            setSurveyors((prev) => prev.map((s) => s.id === id ? { ...s, active: !current } : s))
+        }
     }
 
     async function deleteSurveyor(id: string) {
         if (!confirm('Remove this surveyor? Their link will stop working immediately.')) return
-        await supabase.from('surveyors').delete().eq('id', id)
-        setSurveyors((prev) => prev.filter((s) => s.id !== id))
+        const res = await fetch(`/api/surveyor/surveyors/${id}`, { method: 'DELETE' })
+        if (res.ok) {
+            setSurveyors((prev) => prev.filter((s) => s.id !== id))
+        }
     }
 
     function surveyLink(token: string) {

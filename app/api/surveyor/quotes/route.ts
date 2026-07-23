@@ -1,53 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { createClient } from '@/utils/supabase/server'
 import { normalizeQuoteResult } from '@/lib/surveyor/types'
 import { Resend } from 'resend'
-import { cookies } from 'next/headers'
-import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID } from '@/lib/superAdmin'
-
-// Resolves the company whose data this request should be scoped to. Mirrors
-// getCurrentCompany() (lib/getcurrentcompany.ts) but returns null instead of
-// redirecting on missing auth, since this is consumed by fetch() rather than
-// a page navigation — a 307 redirect body would break the caller silently.
-async function getAuthedCompanyId(): Promise<string | null> {
-    const supabaseAuth = await createClient()
-    const { data: { user } } = await supabaseAuth.auth.getUser()
-    if (!user) return null
-
-    const { data: ownedCompany } = await supabaseAuth
-        .from('companies')
-        .select('id')
-        .eq('owner_user_id', user.id)
-        .maybeSingle()
-
-    let realCompanyId = ownedCompany?.id ?? null
-
-    if (!realCompanyId) {
-        const adminClient = createAdminClient()
-        const { data: membership } = await adminClient
-            .from('company_members')
-            .select('company_id')
-            .eq('user_id', user.id)
-            .not('accepted_at', 'is', null)
-            .maybeSingle()
-
-        realCompanyId = membership?.company_id ?? null
-    }
-
-    if (!realCompanyId) return null
-
-    // Super-admin impersonation: same rule as getCurrentCompany().
-    if (realCompanyId === SUPER_ADMIN_COMPANY_ID) {
-        const cookieStore = await cookies()
-        const impersonateId = cookieStore.get(IMPERSONATION_COOKIE)?.value
-        if (impersonateId && impersonateId !== realCompanyId) {
-            return impersonateId
-        }
-    }
-
-    return realCompanyId
-}
+import { getAuthedCompanyId } from '@/lib/authedCompany'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
