@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -36,6 +37,18 @@ export async function POST(req: NextRequest) {
                 <p style="white-space: pre-wrap;">${escapeHtml(message)}</p>
             `,
         })
+
+        const { error: insertError } = await createAdminClient().from('bug_reports').insert({
+            company_id: company.id,
+            company_name: company.company_name,
+            reporter_email: user.email,
+            page_url: pageUrl ?? null,
+            message,
+        })
+
+        if (insertError) {
+            console.error('Failed to persist bug report:', insertError)
+        }
 
         return NextResponse.json({ success: true })
     } catch (error) {

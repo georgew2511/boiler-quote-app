@@ -3,6 +3,10 @@
         {
             "path": "/api/cron/inactivity-email",
             "schedule": "0 8 * * *"
+        },
+        {
+            "path": "/api/cron/send-campaigns",
+            "schedule": "*/15 * * * *"
         }
     ]
 }

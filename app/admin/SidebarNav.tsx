@@ -193,7 +193,7 @@ export default function SidebarNav({
                 ))}
                 {isSuperAdmin && (
                     <Link
-                        href="/admin/companies"
+                        href="/superadmin"
                         onClick={onNavigate}
                         className="mt-2 flex items-center justify-center rounded-lg border border-amber-600/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-colors"
                     >

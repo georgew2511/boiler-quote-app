@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { fillTemplate, textToHtml } from '@/lib/emailTemplate'
 
 export const INACTIVITY_EMAIL_FROM = process.env.INACTIVITY_EMAIL_FROM || 'Relode <hello@relode.io>'
 export const INACTIVITY_LOGIN_URL = 'https://portal.relode.io/login'
@@ -69,14 +70,9 @@ export function renderInactivityEmail(
     settings: InactivityEmailSettings,
     vars: { company_name: string; login_url: string }
 ) {
-    const fill = (template: string) =>
-        template
-            .replaceAll('{{company_name}}', vars.company_name)
-            .replaceAll('{{login_url}}', vars.login_url)
-
     return {
-        subject: fill(settings.subject),
-        body: fill(settings.body),
+        subject: fillTemplate(settings.subject, vars),
+        body: fillTemplate(settings.body, vars),
     }
 }
 
@@ -96,6 +92,6 @@ export async function sendInactivityEmail(
         subject,
         // Plain text body with line breaks preserved — keeps this simple
         // and easy to edit from the admin area without an HTML editor.
-        html: body.split('\n').map((line) => `<p style="margin:0 0 12px 0;">${line || '&nbsp;'}</p>`).join(''),
+        html: textToHtml(body),
     })
 }

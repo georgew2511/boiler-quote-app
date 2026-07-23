@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
         const { companyName, ownerName, email, phone } = await req.json()
 
         await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL ?? 'noreply@relode.io',
+            from: process.env.RESEND_FROM_EMAIL ?? 'support@relode.io',
             to: 'george@relode.io',
             replyTo: email || undefined,
             subject: `New free trial signup: ${companyName || 'Unnamed company'}`,

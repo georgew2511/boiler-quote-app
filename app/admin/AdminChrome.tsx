@@ -98,7 +98,7 @@ export default function AdminChrome({
                 {isImpersonating && (
                     <div className="flex items-center justify-between bg-amber-400 px-6 py-2.5 text-xs font-semibold text-amber-950">
                         <span>Viewing as {companyName}</span>
-                        <Link href="/admin/companies" className="underline underline-offset-2">Switch company</Link>
+                        <Link href="/superadmin/companies" className="underline underline-offset-2">Switch company</Link>
                     </div>
                 )}
                 {overCap && !isImpersonating && (
