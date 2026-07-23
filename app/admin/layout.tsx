@@ -61,6 +61,7 @@ export default async function AdminLayout({
         <AdminChrome
             companyName={company.company_name}
             logoUrl={company.logo_url}
+            logoSize={company.logo_size}
             serviceAddonEnabled={!!company.service_plans_addon}
             isSuperAdmin={company.isSuperAdmin}
             isImpersonating={company.isImpersonating}

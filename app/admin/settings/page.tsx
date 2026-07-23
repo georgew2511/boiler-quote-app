@@ -14,6 +14,7 @@ export default function SettingsPage() {
     const [settings, setSettings] = useState({
         company_name: '',
         logo_url: '',
+        logo_size: 100,
         primary_colour: '#16a34a',
         secondary_colour: '#0f172a',
         phone_number: '',
@@ -273,7 +274,8 @@ export default function SettingsPage() {
                                             <img
                                                 src={settings.logo_url}
                                                 alt="Company Logo"
-                                                className="h-20 w-auto"
+                                                className="w-auto"
+                                                style={{ height: `${20 * (settings.logo_size / 100)}px` }}
                                             />
                                         </div>
                                     )}
@@ -282,6 +284,27 @@ export default function SettingsPage() {
                                 <p className="mt-2 text-sm text-gray-500">
                                     Upload a logo or paste an image URL.
                                 </p>
+
+                                {settings.logo_url && (
+                                    <div className="mt-4">
+                                        <label className="mb-2 flex items-center justify-between font-medium">
+                                            <span>Logo Size</span>
+                                            <span className="text-sm font-normal text-slate-500">{settings.logo_size}%</span>
+                                        </label>
+                                        <input
+                                            type="range"
+                                            min="25"
+                                            max="300"
+                                            step="5"
+                                            value={settings.logo_size}
+                                            onChange={(e) => setSettings({ ...settings, logo_size: Number(e.target.value) })}
+                                            className="w-full accent-[var(--brand,#16a34a)]"
+                                        />
+                                        <p className="mt-2 text-sm text-gray-500">
+                                            If your logo looks too small or too large in the sidebar, adjust it here.
+                                        </p>
+                                    </div>
+                                )}
 
                             </div>
 

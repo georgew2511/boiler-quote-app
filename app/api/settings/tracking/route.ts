@@ -15,8 +15,9 @@ export async function GET(request: Request) {
             )
         }
 
-        // finance_disclosure is added by a later migration; keep it separate so
-        // we can gracefully drop it from the query if the column isn't there yet.
+        // finance_disclosure and logo_size are added by later migrations; keep
+        // them separate so we can gracefully drop them from the query if the
+        // columns aren't there yet.
         const baseColumns = [
             'company_name', 'logo_url', 'primary_colour', 'secondary_colour',
             'phone_number', 'email_address', 'website', 'from_email', 'reply_to_email',
@@ -26,19 +27,23 @@ export async function GET(request: Request) {
             'zero_percent_term_3', 'quote_validity_days', 'workmanship_warranty_months',
             'google_reviews_url', 'trustpilot_url',
         ]
+        const optionalColumns = ['finance_disclosure', 'logo_size']
 
         let { data, error } = await supabase
             .from('company_settings')
-            .select([...baseColumns, 'finance_disclosure'].join(', '))
+            .select([...baseColumns, ...optionalColumns].join(', '))
             .eq('company_id', companyId)
             .maybeSingle()
 
-        // 42703 = undefined_column. Retry without finance_disclosure so existing
-        // settings still load before the migration has been applied.
-        if (error?.code === '42703') {
-            ({ data, error } = await supabase
+        // 42703 = undefined_column. Retry dropping optional columns one at a
+        // time so existing settings still load before every migration has
+        // been applied.
+        let remainingOptional = [...optionalColumns]
+        while (error?.code === '42703' && remainingOptional.length > 0) {
+            remainingOptional = remainingOptional.slice(0, -1)
+            ;({ data, error } = await supabase
                 .from('company_settings')
-                .select(baseColumns.join(', '))
+                .select([...baseColumns, ...remainingOptional].join(', '))
                 .eq('company_id', companyId)
                 .maybeSingle())
         }
@@ -82,43 +87,47 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: existingError.message }, { status: 500 })
         }
 
-        if (existing?.id) {
-            let { error } = await supabase
-                .from('company_settings')
-                .update(settingsData)
-                .eq('company_id', company_id)
+        // finance_disclosure and logo_size are added by later migrations —
+        // drop them one at a time on an undefined-column error so the rest of
+        // the settings still persist before every migration has been applied.
+        // 42703 = undefined_column (raw Postgres), PGRST204 = PostgREST's
+        // "column not found in schema cache" — insert/update surface the
+        // latter, select() surfaces the former. Check both.
+        const optionalColumns = ['finance_disclosure', 'logo_size']
+        let data = { ...settingsData }
 
-            // finance_disclosure column may not be migrated yet — retry the save
-            // without it so the rest of the settings still persist.
-            // 42703 = undefined_column (raw Postgres), PGRST204 = PostgREST's
-            // "column not found in schema cache" — insert/update surface the
-            // latter, select() surfaces the former. Check both.
-            if ((error?.code === '42703' || error?.code === 'PGRST204') && 'finance_disclosure' in settingsData) {
-                const { finance_disclosure: _drop, ...rest } = settingsData
+        if (existing?.id) {
+            let error
+            do {
                 ;({ error } = await supabase
                     .from('company_settings')
-                    .update(rest)
+                    .update(data)
                     .eq('company_id', company_id))
-            }
+
+                if (error?.code !== '42703' && error?.code !== 'PGRST204') break
+                const droppable = optionalColumns.find((c) => c in data)
+                if (!droppable) break
+                const { [droppable]: _drop, ...rest } = data
+                data = rest
+            } while (error)
 
             if (error) {
                 console.error('Company settings update error:', error)
                 return NextResponse.json({ error: error.message }, { status: 500 })
             }
         } else {
-            let { error } = await supabase
-                .from('company_settings')
-                .insert([{ ...settingsData, company_id }])
-
-            // 42703 = undefined_column (raw Postgres), PGRST204 = PostgREST's
-            // "column not found in schema cache" — insert/update surface the
-            // latter, select() surfaces the former. Check both.
-            if ((error?.code === '42703' || error?.code === 'PGRST204') && 'finance_disclosure' in settingsData) {
-                const { finance_disclosure: _drop, ...rest } = settingsData
+            let error
+            do {
                 ;({ error } = await supabase
                     .from('company_settings')
-                    .insert([{ ...rest, company_id }]))
-            }
+                    .insert([{ ...data, company_id }]))
+
+                if (error?.code !== '42703' && error?.code !== 'PGRST204') break
+                const droppable = optionalColumns.find((c) => c in data)
+                if (!droppable) break
+                const { [droppable]: _drop, ...rest } = data
+                data = rest
+            } while (error)
 
             if (error) {
                 console.error('Company settings insert error:', error)

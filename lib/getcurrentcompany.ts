@@ -73,17 +73,27 @@ export async function getCurrentCompany() {
         }
     }
 
-    // Fetch logo from company_settings
+    // Fetch logo from company_settings. logo_size is a newer column — fall
+    // back to just logo_url if that migration hasn't been applied yet.
     const adminClient = createAdminClient()
-    const { data: settings } = await adminClient
+    let { data: settings, error: settingsError } = await adminClient
         .from('company_settings')
-        .select('logo_url')
+        .select('logo_url, logo_size')
         .eq('company_id', company.id)
         .maybeSingle()
+
+    if (settingsError?.code === '42703') {
+        ({ data: settings } = await adminClient
+            .from('company_settings')
+            .select('logo_url')
+            .eq('company_id', company.id)
+            .maybeSingle())
+    }
 
     return {
         ...company,
         logo_url: settings?.logo_url ?? null,
+        logo_size: settings?.logo_size ?? 100,
         memberRole,
         isSuperAdmin,
         isImpersonating: impersonating,

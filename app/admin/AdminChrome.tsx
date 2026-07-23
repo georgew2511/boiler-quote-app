@@ -9,6 +9,7 @@ import OnboardingGuide from './OnboardingGuide'
 export default function AdminChrome({
     companyName,
     logoUrl,
+    logoSize = 100,
     serviceAddonEnabled,
     isSuperAdmin,
     isImpersonating,
@@ -20,6 +21,7 @@ export default function AdminChrome({
 }: {
     companyName: string
     logoUrl: string | null
+    logoSize?: number
     serviceAddonEnabled: boolean
     isSuperAdmin: boolean
     isImpersonating: boolean
@@ -30,6 +32,7 @@ export default function AdminChrome({
     children: React.ReactNode
 }) {
     const [mobileOpen, setMobileOpen] = useState(false)
+    const logoScale = logoSize / 100
 
     return (
         <div className="flex h-screen overflow-hidden bg-slate-50">
@@ -45,7 +48,12 @@ export default function AdminChrome({
                     </svg>
                 </button>
                 {logoUrl ? (
-                    <img src={logoUrl} alt={companyName} className="h-7 max-w-[120px] object-contain" />
+                    <img
+                        src={logoUrl}
+                        alt={companyName}
+                        className="object-contain"
+                        style={{ height: `${40 * logoScale}px`, maxWidth: `${160 * logoScale}px` }}
+                    />
                 ) : (
                     <span className="text-sm font-semibold text-white">{companyName}</span>
                 )}
@@ -60,9 +68,14 @@ export default function AdminChrome({
             {/* Sidebar */}
             <aside className={`fixed inset-y-0 left-0 z-40 flex h-screen w-64 flex-col bg-slate-950 transition-transform duration-200 md:static md:z-auto md:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {/* Logo area */}
-                <div className="flex h-16 items-center justify-between border-b border-slate-800/60 px-5">
+                <div className="flex min-h-16 items-end justify-between border-b border-slate-800/60 px-5 pb-3 pt-6">
                     {logoUrl ? (
-                        <img src={logoUrl} alt={companyName} className="h-8 max-w-[140px] object-contain object-left" />
+                        <img
+                            src={logoUrl}
+                            alt={companyName}
+                            className="object-contain object-left"
+                            style={{ height: `${48 * logoScale}px`, maxWidth: `${180 * logoScale}px` }}
+                        />
                     ) : (
                         <span className="text-base font-semibold text-white">{companyName}</span>
                     )}
@@ -87,8 +100,8 @@ export default function AdminChrome({
                 </nav>
 
                 {/* Relode branding */}
-                <div className="border-t border-slate-800/60 px-5 py-4">
-                    <img src="/relode-logo-white.png" alt="Relode" className="h-6 w-auto opacity-50" />
+                <div className="flex justify-center border-t border-slate-800/60 px-5 py-4">
+                    <img src="/relode-logo-white.png" alt="Relode" className="h-24 w-auto opacity-50" />
                 </div>
             </aside>
 
