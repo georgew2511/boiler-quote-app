@@ -101,7 +101,7 @@ export default function AdminChrome({
 
                 {/* Relode branding */}
                 <div className="flex justify-center border-t border-slate-800/60 px-5 py-4">
-                    <img src="/relode-logo-white.png" alt="Relode" className="h-24 w-auto opacity-50" />
+                    <img src="/relode-logo-white.png" alt="Relode" className="h-8 w-auto opacity-50" />
                 </div>
             </aside>
 
