@@ -1,7 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { createClient } from '@/utils/supabase/server'
 import { normalizeQuoteResult } from '@/lib/surveyor/types'
 import { Resend } from 'resend'
+
+async function getAuthedCompanyId(): Promise<string | null> {
+    const supabaseAuth = await createClient()
+    const { data: { user } } = await supabaseAuth.auth.getUser()
+    if (!user) return null
+
+    const { data: ownedCompany } = await supabaseAuth
+        .from('companies')
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .maybeSingle()
+
+    if (ownedCompany) return ownedCompany.id
+
+    const adminClient = createAdminClient()
+    const { data: membership } = await adminClient
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .not('accepted_at', 'is', null)
+        .maybeSingle()
+
+    return membership?.company_id ?? null
+}
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -22,6 +47,23 @@ export async function POST(req: NextRequest) {
         const { survey, quoteResult, companyId, surveyorId, surveyorName } = await req.json()
 
         const supabase = createAdminClient()
+
+        // companyId here comes from the public /survey/[token] flow, where it was
+        // already resolved server-side from the surveyor's token (see
+        // app/survey/[token]/page.tsx) — that page has no logged-in session, so we
+        // can't require auth here. Cross-check the surveyor actually belongs to the
+        // claimed company so a tampered client can't inject quotes into another company.
+        if (surveyorId) {
+            const { data: surveyorRow } = await supabase
+                .from('surveyors')
+                .select('company_id')
+                .eq('id', surveyorId)
+                .maybeSingle()
+
+            if (!surveyorRow || surveyorRow.company_id !== companyId) {
+                return NextResponse.json({ error: 'Invalid surveyor for company' }, { status: 403 })
+            }
+        }
 
         // Fetch company details for the email
         const { data: company } = await supabase
@@ -134,20 +176,19 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
-        const supabase = createAdminClient()
-        const { searchParams } = new URL(req.url)
-        const companyId = searchParams.get('company_id')
-
-        let query = supabase
-            .from('surveyor_quotes')
-            .select('id, created_at, customer_name, customer_email, customer_phone, postcode, low_total, high_total, line_items, status, email_sent_at, accepted_tier, accepted_at, last_viewed_at, view_count, notes, surveyor_id, surveyor_name')
-            .order('created_at', { ascending: false })
-
-        if (companyId) {
-            query = query.eq('company_id', companyId)
+        const companyId = await getAuthedCompanyId()
+        if (!companyId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
-        const { data, error } = await query
+        const supabase = createAdminClient()
+
+        const { data, error } = await supabase
+            .from('surveyor_quotes')
+            .select('id, created_at, customer_name, customer_email, customer_phone, postcode, low_total, high_total, line_items, status, email_sent_at, accepted_tier, accepted_at, last_viewed_at, view_count, notes, surveyor_id, surveyor_name')
+            .eq('company_id', companyId)
+            .order('created_at', { ascending: false })
+
         if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
         // Derive the option count from line_items rather than trusting a fixed

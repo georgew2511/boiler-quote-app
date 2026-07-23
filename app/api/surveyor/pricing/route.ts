@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
+import { getCurrentCompany } from '@/lib/getcurrentcompany'
 
 const DEFAULT_PRICING = [
     // LABOUR
@@ -128,22 +129,13 @@ const DEFAULT_PRICING = [
     { category: 'INHIBITOR', key: 'inhibitor_2L',                  name: 'Inhibitor 2 Litre',                       price: 36,    unit: 'each' },
 ]
 
-export async function POST(req: NextRequest) {
-    try {
-        const contentType = req.headers.get('content-type') ?? ''
-        let companyId: string | null = null
-        if (contentType.includes('application/json')) {
-            const body = await req.json().catch(() => ({}))
-            companyId = body.company_id ?? null
-        } else {
-            const form = await req.formData().catch(() => null)
-            companyId = form?.get('company_id')?.toString() ?? null
-        }
-        companyId = companyId ?? req.nextUrl.searchParams.get('company_id')
-        if (!companyId) {
-            return NextResponse.json({ error: 'company_id required' }, { status: 400 })
-        }
+export async function POST() {
+    // Left outside the try/catch: redirect() throws a NEXT_REDIRECT signal that
+    // Next.js needs to handle directly, not our generic error catch below.
+    const company = await getCurrentCompany()
+    const companyId = company.id
 
+    try {
         const supabase = createAdminClient()
         const rows = DEFAULT_PRICING.map((p) => ({ ...p, company_id: companyId, active: true }))
 
