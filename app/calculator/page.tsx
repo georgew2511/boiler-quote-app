@@ -1921,6 +1921,17 @@ function CalculatorContent() {
                       event: 'lead_submitted',
                       lead_id: data.id,
                     })
+
+                    // Notify the company that a lead landed. Deliberately not
+                    // awaited: the homeowner shouldn't wait on an email, and a
+                    // notification failure must never block seeing their prices.
+                    // The route resolves the recipient itself and ignores
+                    // preview/'Test' leads.
+                    fetch('/api/notify-lead', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ leadId: data.id }),
+                    }).catch((err) => console.error('Lead notification failed:', err))
                   }
 
                   setShowLeadModal(false)
