@@ -27,6 +27,13 @@ export async function GET(request: Request) {
 
     const supabase = await createClient()
 
+    // If they're already signed in, whatever the link did or didn't do is
+    // moot — send them on rather than to an error page.
+    const { data: { user: existingUser } } = await supabase.auth.getUser()
+    if (existingUser) {
+        return NextResponse.redirect(`${origin}/admin`)
+    }
+
     if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (!error) {

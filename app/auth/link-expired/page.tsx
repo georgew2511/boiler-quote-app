@@ -34,7 +34,7 @@ function LinkExpired() {
 
     const heading =
         reason === 'otp_expired'
-            ? 'That verification link has expired'
+            ? 'That verification link has already been used'
             : 'That verification link didn’t work'
 
     return (
@@ -43,43 +43,61 @@ function LinkExpired() {
 
             <div className="relative w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur">
                 <h1 className="text-2xl font-bold text-white">{heading}</h1>
-                <p className="mt-3 text-slate-400">
-                    Verification links are single-use and time-limited. Some email providers also
-                    follow links automatically to scan them, which uses the link up before you get
-                    to it. Enter your email and we&apos;ll send a fresh one.
-                </p>
 
-                {sent ? (
-                    <div className="mt-6 rounded-xl bg-emerald-500/10 px-5 py-4 text-sm text-emerald-300">
-                        New verification email sent. Check your inbox — the link is good for one use.
-                    </div>
-                ) : (
-                    <div className="mt-6 space-y-3">
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && resend()}
-                            placeholder="you@company.com"
-                            className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                        />
-                        <button
-                            onClick={resend}
-                            disabled={sending || !email.trim()}
-                            className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
-                        >
-                            {sending ? 'Sending…' : 'Send me a new link'}
-                        </button>
-                        {error && <p className="text-sm text-red-400">{error}</p>}
-                    </div>
-                )}
+                {/* Sign-in comes first on purpose. The overwhelmingly common
+                    cause of landing here is a mail provider's link scanner
+                    (Outlook and Microsoft 365 especially) following the link to
+                    check it's safe. That consumes the single-use token — but it
+                    also completes the verification, so the account is usually
+                    already active by the time the human clicks. Leading with
+                    "resend" sent people round a loop that could never work,
+                    because Supabase won't re-send to a confirmed address. */}
+                <p className="mt-3 text-slate-400">
+                    Your email address may already be verified. Some email providers
+                    automatically follow links to scan them, which uses up the one-time
+                    link but still completes the verification. Try signing in first.
+                </p>
 
                 <Link
                     href="/"
-                    className="mt-6 flex w-full items-center justify-center rounded-xl border border-slate-700 py-3 font-medium text-white transition hover:bg-slate-800"
+                    className="mt-6 flex w-full items-center justify-center rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-700"
                 >
-                    Back to Sign In
+                    Go to Sign In
                 </Link>
+
+                <div className="mt-8 border-t border-slate-800 pt-6">
+                    <p className="text-sm text-slate-400">
+                        If signing in tells you the email still isn&apos;t confirmed, request a
+                        fresh link below.
+                    </p>
+
+                    {sent ? (
+                        <div className="mt-4 rounded-xl bg-emerald-500/10 px-5 py-4 text-sm text-emerald-300">
+                            If that address still needs verifying, a new link is on its way.
+                            Nothing will arrive if it&apos;s already been confirmed — in that
+                            case just sign in above.
+                        </div>
+                    ) : (
+                        <div className="mt-4 space-y-3">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && resend()}
+                                placeholder="you@company.com"
+                                className="w-full rounded-xl border border-slate-700 bg-slate-800 px-4 py-3 text-white outline-none transition focus:border-blue-500"
+                            />
+                            <button
+                                onClick={resend}
+                                disabled={sending || !email.trim()}
+                                className="w-full rounded-xl border border-slate-700 py-3 font-medium text-white transition hover:bg-slate-800 disabled:opacity-50"
+                            >
+                                {sending ? 'Sending…' : 'Send me a new link'}
+                            </button>
+                            {error && <p className="text-sm text-red-400">{error}</p>}
+                        </div>
+                    )}
+                </div>
             </div>
         </main>
     )
