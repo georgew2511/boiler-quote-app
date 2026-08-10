@@ -59,9 +59,9 @@ interface PricingRow {
 export default async function SurveyorPricingPage({
     searchParams,
 }: {
-    searchParams: Promise<{ saved?: string }>
+    searchParams: Promise<{ saved?: string; error?: string }>
 }) {
-    const { saved } = await searchParams
+    const { saved, error: saveError } = await searchParams
     const company = await getCurrentCompany()
     // surveyor_pricing_items has owner-only RLS, but the surveyor tool is used by
     // team members too, so we read/write with the admin client scoped to the
@@ -98,6 +98,65 @@ export default async function SurveyorPricingPage({
         unit: r.unit,
         active: r.active,
     }))
+
+    async function addPricingItem(formData: FormData) {
+        'use server'
+        const supabase = createAdminClient()
+        const admin = await getCurrentCompany()
+
+        // Server-side gate — the UI already hides this form from everyone
+        // else, but a submitted form action must never trust that alone.
+        if (!admin.isPlatformAdmin) {
+            throw new Error('Only the platform admin can add new pricing items.')
+        }
+
+        const category = (formData.get('new_category')?.toString() || '').trim().toUpperCase()
+        const name = (formData.get('new_name')?.toString() || '').trim()
+        const key = (formData.get('new_key')?.toString() || '').trim().toLowerCase()
+        const unit = (formData.get('new_unit')?.toString() || 'each').trim()
+        const price = Number(formData.get('new_price') ?? 0) || 0
+
+        if (!category || !name || !key) {
+            redirect('/admin/surveyor-pricing?error=missing_fields')
+        }
+
+        const { error: masterError } = await supabase.from('surveyor_pricing_master_items').insert({
+            category,
+            name,
+            key,
+            price,
+            unit,
+            created_by: admin.userId,
+        })
+        if (masterError) {
+            console.error('Failed to save master pricing item:', masterError.message)
+            redirect('/admin/surveyor-pricing?error=save_failed')
+        }
+
+        // Roll the new item out to every company so it appears in everyone's
+        // pricing editor and quote calculator, each with its own editable price.
+        const { data: allCompanies, error: companiesError } = await supabase.from('companies').select('id')
+        if (companiesError) console.error('Failed to load companies for rollout:', companiesError.message)
+
+        const rows = (allCompanies ?? []).map((c: { id: string }) => ({
+            company_id: c.id,
+            category,
+            name,
+            key,
+            price,
+            unit,
+            active: true,
+        }))
+
+        if (rows.length > 0) {
+            const { error: rolloutError } = await supabase
+                .from('surveyor_pricing_items')
+                .upsert(rows, { onConflict: 'company_id,key', ignoreDuplicates: true })
+            if (rolloutError) console.error('Failed to roll out new pricing item:', rolloutError.message)
+        }
+
+        redirect('/admin/surveyor-pricing?saved=1')
+    }
 
     async function savePricing(formData: FormData) {
         'use server'
@@ -172,6 +231,98 @@ export default async function SurveyorPricingPage({
                 {saved && (
                     <div className="mt-6 rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800">
                         Pricing saved.
+                    </div>
+                )}
+
+                {saveError === 'missing_fields' && (
+                    <div className="mt-6 rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-800">
+                        Category, item name, and key are all required to add a new pricing item.
+                    </div>
+                )}
+
+                {saveError === 'save_failed' && (
+                    <div className="mt-6 rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-800">
+                        Couldn&apos;t save that pricing item — the key may already be in use. Check the console/logs
+                        for details.
+                    </div>
+                )}
+
+                {company.isPlatformAdmin && (
+                    <div className="mt-6 rounded-3xl border border-indigo-200 bg-indigo-50 p-6 shadow-sm">
+                        <h2 className="text-lg font-bold text-indigo-900">Add a new pricing item</h2>
+                        <p className="mt-1 mb-4 text-sm text-indigo-800">
+                            Only your account can do this. New items are rolled out to every company&apos;s pricing
+                            editor and quote calculator immediately — each company then sets its own price.
+                        </p>
+                        <form action={addPricingItem} className="grid grid-cols-2 gap-4 md:grid-cols-6">
+                            <label className="col-span-2 text-sm font-medium text-indigo-900 md:col-span-1">
+                                Category
+                                <input
+                                    type="text"
+                                    name="new_category"
+                                    list="category-options"
+                                    placeholder="GAS"
+                                    className="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                    required
+                                />
+                                <datalist id="category-options">
+                                    {Object.keys(CATEGORY_LABELS).map((c) => (
+                                        <option key={c} value={c}>
+                                            {CATEGORY_LABELS[c]}
+                                        </option>
+                                    ))}
+                                </datalist>
+                            </label>
+                            <label className="col-span-2 text-sm font-medium text-indigo-900 md:col-span-2">
+                                Item name
+                                <input
+                                    type="text"
+                                    name="new_name"
+                                    placeholder="e.g. 15mm Gas Tee"
+                                    className="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                    required
+                                />
+                            </label>
+                            <label className="col-span-2 text-sm font-medium text-indigo-900 md:col-span-1">
+                                Key
+                                <input
+                                    type="text"
+                                    name="new_key"
+                                    placeholder="gas_15mm_tee"
+                                    className="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                    required
+                                />
+                            </label>
+                            <label className="text-sm font-medium text-indigo-900">
+                                Unit
+                                <input
+                                    type="text"
+                                    name="new_unit"
+                                    defaultValue="each"
+                                    className="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                    required
+                                />
+                            </label>
+                            <label className="text-sm font-medium text-indigo-900">
+                                Default price (£)
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    name="new_price"
+                                    defaultValue={0}
+                                    className="mt-1 w-full rounded-xl border border-indigo-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                />
+                            </label>
+                            <div className="col-span-2 flex items-end md:col-span-6">
+                                <button
+                                    type="submit"
+                                    className="rounded-xl border border-indigo-700 bg-indigo-700 px-6 py-2.5 font-semibold text-white shadow-sm transition-all hover:bg-indigo-800"
+                                >
+                                    Add item to every company
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 )}
 

@@ -2,7 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID } from '@/lib/superAdmin'
+import { IMPERSONATION_COOKIE, SUPER_ADMIN_COMPANY_ID, PLATFORM_ADMIN_USER_ID } from '@/lib/superAdmin'
 
 export type MemberRole = 'owner' | 'admin' | 'surveyor' | 'viewer'
 
@@ -98,5 +98,7 @@ export async function getCurrentCompany() {
         isSuperAdmin,
         isImpersonating: impersonating,
         realCompanyId: realCompany.id,
+        userId: user.id,
+        isPlatformAdmin: user.id === PLATFORM_ADMIN_USER_ID,
     }
 }

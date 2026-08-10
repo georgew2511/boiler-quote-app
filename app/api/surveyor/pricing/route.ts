@@ -137,7 +137,19 @@ export async function POST() {
 
     try {
         const supabase = createAdminClient()
-        const rows = DEFAULT_PRICING.map((p) => ({ ...p, company_id: companyId, active: true }))
+
+        // Master items are pricing sections/items the platform admin has added
+        // since this list was last hardcoded (see surveyor_pricing_master_items,
+        // gated to PLATFORM_ADMIN_USER_ID in app/admin/surveyor-pricing/page.tsx).
+        // Merging them here means new signups and "restore missing defaults"
+        // both pick them up, not just companies that existed when they were added.
+        const { data: masterItems, error: masterError } = await supabase
+            .from('surveyor_pricing_master_items')
+            .select('category, name, key, price, unit')
+        if (masterError) console.error('Failed to load master pricing items:', masterError.message)
+
+        const combined = [...DEFAULT_PRICING, ...(masterItems ?? [])]
+        const rows = combined.map((p) => ({ ...p, company_id: companyId, active: true }))
 
         // ignoreDuplicates so seeding only inserts items that don't already exist
         // for this company — it never overwrites prices the admin has edited.
