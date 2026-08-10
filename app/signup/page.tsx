@@ -113,14 +113,24 @@ export default function SignupPage() {
             })
         }
 
-        // signUp() returns a session only when email confirmation is off. When
-        // it's on there's a verification email to action first, so say so
-        // rather than sending them to a sign-in that will reject them.
-        alert(
-            data.session
-                ? 'Account created successfully. Sign in to pick a plan and start your 14-day free trial.'
-                : 'Account created successfully. Check your email to verify your address, then sign in to pick a plan and start your 14-day free trial.'
-        )
+        // With email confirmation off — the intended configuration — signUp()
+        // returns a session, so they're already logged in. Send them straight
+        // to the plan picker instead of bouncing through a sign-in screen they
+        // don't need. Entering a card is what actually proves the account is
+        // real, and that's the very next thing they do.
+        //
+        // The confirmation-on branch is kept as a fallback so the flow still
+        // works if that setting is ever switched back on. It shouldn't be:
+        // verification links are single-use, and Outlook/Microsoft scanners
+        // routinely consume them before the customer clicks, which strands
+        // people on an error page for an account that already verified.
+        if (data.session) {
+            router.push('/admin')
+            setLoading(false)
+            return
+        }
+
+        alert('Account created successfully. Check your email to verify your address, then sign in to pick a plan and start your 14-day free trial.')
 
         router.push('/')
         setLoading(false)
