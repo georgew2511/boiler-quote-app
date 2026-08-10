@@ -59,9 +59,9 @@ interface PricingRow {
 export default async function SurveyorPricingPage({
     searchParams,
 }: {
-    searchParams: Promise<{ saved?: string; error?: string }>
+    searchParams: Promise<{ saved?: string; error?: string; deleted?: string }>
 }) {
-    const { saved, error: saveError } = await searchParams
+    const { saved, error: saveError, deleted } = await searchParams
     const company = await getCurrentCompany()
     // surveyor_pricing_items has owner-only RLS, but the surveyor tool is used by
     // team members too, so we read/write with the admin client scoped to the
@@ -155,7 +155,55 @@ export default async function SurveyorPricingPage({
             if (rolloutError) console.error('Failed to roll out new pricing item:', rolloutError.message)
         }
 
+        // Re-adding a previously deleted key should un-suppress it, otherwise
+        // the seed route would keep filtering it out of future signups.
+        await supabase.from('surveyor_pricing_suppressed_keys').delete().eq('key', key)
+
         redirect('/admin/surveyor-pricing?saved=1')
+    }
+
+    async function deletePricingItem(formData: FormData) {
+        'use server'
+        const supabase = createAdminClient()
+        const admin = await getCurrentCompany()
+
+        // Server-side gate — deletion removes the item from every company, so
+        // never trust the hidden-in-UI state alone.
+        if (!admin.isPlatformAdmin) {
+            throw new Error('Only the platform admin can delete pricing items.')
+        }
+
+        const key = (formData.get('delete_key')?.toString() || '').trim()
+        if (!key) {
+            redirect('/admin/surveyor-pricing?error=missing_fields')
+        }
+
+        // Record the key first so that even if the deletes below partially fail,
+        // the item can't silently reappear via seeding.
+        const { error: suppressError } = await supabase
+            .from('surveyor_pricing_suppressed_keys')
+            .upsert({ key, deleted_by: admin.userId }, { onConflict: 'key' })
+        if (suppressError) {
+            console.error('Failed to record deleted pricing key:', suppressError.message)
+            redirect('/admin/surveyor-pricing?error=delete_failed')
+        }
+
+        // Remove it from every company's pricing list and from the master
+        // catalogue. Existing quotes are unaffected — surveyor_quotes.line_items
+        // is a jsonb snapshot taken at quote time.
+        const { error: itemsError } = await supabase.from('surveyor_pricing_items').delete().eq('key', key)
+        if (itemsError) {
+            console.error('Failed to delete pricing item:', itemsError.message)
+            redirect('/admin/surveyor-pricing?error=delete_failed')
+        }
+
+        const { error: masterDeleteError } = await supabase
+            .from('surveyor_pricing_master_items')
+            .delete()
+            .eq('key', key)
+        if (masterDeleteError) console.error('Failed to delete master pricing item:', masterDeleteError.message)
+
+        redirect('/admin/surveyor-pricing?deleted=1')
     }
 
     async function savePricing(formData: FormData) {
@@ -231,6 +279,18 @@ export default async function SurveyorPricingPage({
                 {saved && (
                     <div className="mt-6 rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800">
                         Pricing saved.
+                    </div>
+                )}
+
+                {deleted && (
+                    <div className="mt-6 rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800">
+                        Item deleted from every company. Existing quotes are unaffected.
+                    </div>
+                )}
+
+                {saveError === 'delete_failed' && (
+                    <div className="mt-6 rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-800">
+                        Couldn&apos;t delete that item. Check the console/logs for details.
                     </div>
                 )}
 
@@ -409,6 +469,7 @@ export default async function SurveyorPricingPage({
                                             <th className="pb-3 font-medium">Unit</th>
                                             <th className="pb-3 text-right font-medium">Price (£)</th>
                                             <th className="pb-3 pl-4 text-center font-medium">Active</th>
+                                            {company.isPlatformAdmin && <th className="pb-3 pl-4 font-medium" />}
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -438,6 +499,22 @@ export default async function SurveyorPricingPage({
                                                         className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                                                     />
                                                 </td>
+                                                {company.isPlatformAdmin && (
+                                                    <td className="py-3 pl-4 text-right">
+                                                        {/* formAction (rather than a nested <form>, which is invalid
+                                                            HTML) reroutes this one submit to the delete action. The
+                                                            clicked button's name/value identifies the row. */}
+                                                        <button
+                                                            type="submit"
+                                                            name="delete_key"
+                                                            value={item.key}
+                                                            formAction={deletePricingItem}
+                                                            className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
                                     </tbody>

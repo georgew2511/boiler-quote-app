@@ -148,7 +148,15 @@ export async function POST() {
             .select('category, name, key, price, unit')
         if (masterError) console.error('Failed to load master pricing items:', masterError.message)
 
-        const combined = [...DEFAULT_PRICING, ...(masterItems ?? [])]
+        // Keys the platform admin has deleted must never be re-seeded, or
+        // deleting a built-in DEFAULT_PRICING item would silently undo itself.
+        const { data: suppressed, error: suppressedError } = await supabase
+            .from('surveyor_pricing_suppressed_keys')
+            .select('key')
+        if (suppressedError) console.error('Failed to load suppressed pricing keys:', suppressedError.message)
+        const suppressedKeys = new Set((suppressed ?? []).map((s: { key: string }) => s.key))
+
+        const combined = [...DEFAULT_PRICING, ...(masterItems ?? [])].filter((p) => !suppressedKeys.has(p.key))
         const rows = combined.map((p) => ({ ...p, company_id: companyId, active: true }))
 
         // ignoreDuplicates so seeding only inserts items that don't already exist
