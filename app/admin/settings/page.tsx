@@ -14,6 +14,16 @@ export default function SettingsPage() {
     const [canBrand, setCanBrand] = useState(true)
     const router = useRouter()
 
+    // The login email lives on the auth user, not in company_settings, so it
+    // had no home on this page — leaving a typo at signup uncorrectable from
+    // inside the app. Nothing else reaches this customer: password resets, the
+    // trial-ending warning before their first charge, and Stripe's receipts
+    // all go here.
+    const [ownerEmail, setOwnerEmail] = useState('')
+    const [ownerEmailDraft, setOwnerEmailDraft] = useState('')
+    const [savingOwnerEmail, setSavingOwnerEmail] = useState(false)
+    const [ownerEmailNotice, setOwnerEmailNotice] = useState<string | null>(null)
+
     const supabase = createClient()
     const [settings, setSettings] = useState({
         company_name: '',
@@ -49,6 +59,37 @@ export default function SettingsPage() {
         google_reviews_url: '',
         trustpilot_url: '',
     })
+
+    const saveOwnerEmail = async () => {
+        const next = ownerEmailDraft.trim()
+        if (!next || next === ownerEmail) return
+
+        setSavingOwnerEmail(true)
+        setOwnerEmailNotice(null)
+
+        const { data, error } = await supabase.auth.updateUser({ email: next })
+
+        if (error) {
+            setOwnerEmailNotice(error.message)
+            setSavingOwnerEmail(false)
+            return
+        }
+
+        // Whether this applies immediately or needs a click in the inbox
+        // depends on the project's email settings, so report what actually came
+        // back rather than promising either outcome.
+        if (data.user?.email === next) {
+            setOwnerEmail(next)
+            setOwnerEmailNotice('Login email updated.')
+        } else {
+            setOwnerEmailNotice(
+                `Confirmation sent to ${next}. Click the link in that email to finish the change — ` +
+                `until then you still sign in with ${ownerEmail}.`
+            )
+        }
+
+        setSavingOwnerEmail(false)
+    }
 
     const handleLogoUpload = async (
         event: React.ChangeEvent<HTMLInputElement>
@@ -130,6 +171,9 @@ export default function SettingsPage() {
                     alert('No user found')
                     return
                 }
+
+                setOwnerEmail(user.email ?? '')
+                setOwnerEmailDraft(user.email ?? '')
 
                 const { data: company, error: companyError } = await supabase
                     .from('companies')
@@ -232,6 +276,52 @@ export default function SettingsPage() {
                             <p className="mt-2 text-xl font-bold">{settings.finance_deposit_percent}%</p>
                         </div>
                     </div>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                        <h2 className="text-2xl font-bold">Your Account</h2>
+                        <p className="mt-1 text-sm text-slate-500">
+                            The email you sign in with. Password resets, billing receipts and the
+                            warning before your first payment are all sent here — so if there&apos;s a
+                            typo, nothing from us reaches you.
+                        </p>
+
+                        <div className="mt-6 grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label className="mb-2 block font-medium">Login Email</label>
+                                <input
+                                    type="email"
+                                    value={ownerEmailDraft}
+                                    onChange={(e) => setOwnerEmailDraft(e.target.value)}
+                                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                            </div>
+
+                            <div className="flex items-end">
+                                <button
+                                    type="button"
+                                    onClick={saveOwnerEmail}
+                                    disabled={
+                                        savingOwnerEmail ||
+                                        !ownerEmailDraft.trim() ||
+                                        ownerEmailDraft.trim() === ownerEmail
+                                    }
+                                    className="rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {savingOwnerEmail ? 'Updating…' : 'Update Login Email'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Saved separately from everything else on this page —
+                            it writes to the auth user rather than to
+                            company_settings, so the page's Save button doesn't
+                            and can't cover it. */}
+                        {ownerEmailNotice && (
+                            <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                {ownerEmailNotice}
+                            </p>
+                        )}
+                    </div>
+
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h2 className="text-2xl font-bold">Company Branding</h2>
 
