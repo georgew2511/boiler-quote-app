@@ -86,6 +86,38 @@ function CompanyLogo({
   );
 }
 
+// The "Ask a question" trigger, shared by every place it appears so the wording
+// and behaviour can't drift between them. Kept understated next to Accept —
+// it's the fallback for someone who isn't ready, not a competing call to
+// action. `no-print` throughout: these do nothing on a printed PDF.
+function AskQuestionButton({
+  onClick,
+  variant,
+}: {
+  onClick: () => void;
+  variant: "inline" | "block";
+}) {
+  if (variant === "block") {
+    return (
+      <button
+        onClick={onClick}
+        className="no-print w-full mt-2 py-2.5 rounded-xl font-semibold text-sm text-slate-600 border border-slate-200 bg-white transition-all hover:bg-slate-50 active:scale-95"
+      >
+        Ask a question
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className="no-print text-sm font-semibold text-slate-500 underline underline-offset-4 transition-colors hover:text-slate-700"
+    >
+      Ask a question about this quote
+    </button>
+  );
+}
+
 function monthlyPayment(total: number, months: number, aprPercent: number): number {
   if (aprPercent === 0) return total / months;
   const r = aprPercent / 12 / 100;
@@ -369,6 +401,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
               >
                 Accept quote
               </button>
+              <AskQuestionButton variant="block" onClick={() => setShowQuestion(true)} />
             </div>
 
             {/* ── Desktop hero layout ── */}
@@ -416,6 +449,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                   <p className="text-[10px] text-slate-400 mt-1.5 leading-tight">
                     {quote.boilerName} · {fmt(total)}
                   </p>
+                  <AskQuestionButton variant="block" onClick={() => setShowQuestion(true)} />
                 </div>
               </div>
             </div>
@@ -554,6 +588,13 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                 </button>
               );
             })}
+          </div>
+
+          {/* Sits with the tier switcher on purpose: this is the moment someone
+              is weighing options and most likely to have a question they'd
+              otherwise leave the page to ask. */}
+          <div className="mt-3 border-t border-slate-100 pt-3 text-center">
+            <AskQuestionButton variant="inline" onClick={() => setShowQuestion(true)} />
           </div>
         </div>
 
