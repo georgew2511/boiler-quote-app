@@ -19,9 +19,9 @@ export default async function AdminLayout({
     // companies and the super-admin account itself are never locked.
     //
     // The trial check keys off stripe_subscription_id rather than the status
-    // and dates, because signup has to write subscription_status: 'trial' with
-    // a trial_ends_at to satisfy the RLS insert policy on `companies` — so
-    // those two fields say nothing about whether a card was ever given.
+    // and dates, because signup writes subscription_status: 'trial' with a
+    // trial_ends_at to every new row — so those two fields say nothing about
+    // whether a card was ever given. Only a Stripe subscription does.
     const hasActivePaidPlan =
         ['starter', 'growth', 'pro'].includes(company.subscription_tier || '') &&
         company.subscription_status === 'active'

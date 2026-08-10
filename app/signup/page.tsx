@@ -46,19 +46,50 @@ export default function SignupPage() {
             return
         }
 
+        // Supabase returns a decoy user with no identities when the email is
+        // already registered, rather than leaking that it exists. Without this
+        // check the flow carries on and fails further down on a confusing RLS
+        // error instead of telling them they already have an account.
+        if (data.user && data.user.identities && data.user.identities.length === 0) {
+            alert('An account with that email already exists. Try signing in instead.')
+            setLoading(false)
+            return
+        }
+
+        // Everything below runs as the signed-in user against RLS-protected
+        // tables, so it needs the session signUp() returns. That session is
+        // null whenever email confirmation is switched on for the project, and
+        // every insert then fails as `anon`. Fail here, with the actual cause,
+        // rather than letting it surface as "violates row-level security".
+        if (data.user && !data.session) {
+            console.error(
+                'Signup: no session returned from signUp(). Email confirmation is enabled ' +
+                'for this Supabase project; company creation cannot run client-side.'
+            )
+            alert(
+                'Your account was created but we could not finish setting up your company. ' +
+                'Please contact support@relode.io and we will sort it out right away.'
+            )
+            setLoading(false)
+            return
+        }
+
         if (data.user) {
             const trialEndDate = new Date()
             trialEndDate.setDate(trialEndDate.getDate() + 14)
 
-            // These two fields have to keep their original values: the RLS
-            // insert policy on `companies` (defined in the Supabase dashboard,
-            // not in supabase/migrations) checks them, and writing anything
-            // else fails with "new row violates row-level security policy".
+            // These two columns say nothing about entitlement any more. What
+            // grants the dashboard is a Stripe subscription: stripe_subscription_id
+            // is null until a card has been taken, and AdminLayout gates on
+            // that. They're written only to keep new rows shaped like the
+            // existing ones; treat the row as "signed up, no card yet".
             //
-            // So they no longer decide access. What actually grants the
-            // dashboard is a Stripe subscription — stripe_subscription_id is
-            // null until a card has been taken, and AdminLayout gates on that.
-            // Treat the row as "signed up, no card yet" until then.
+            // This insert needs a session — the RLS insert policy on
+            // `companies` is scoped to the `authenticated` role. Supabase only
+            // returns a session from signUp() when email confirmation is off.
+            // With it on, this runs as `anon` and fails with "new row violates
+            // row-level security policy", which is what broke signup between
+            // late July and 10 Aug 2026.
             const { data: company, error: companyError } = await supabaseBrowser
                 .from('companies')
                 .insert({
@@ -146,7 +177,7 @@ export default function SignupPage() {
             })
         }
 
-        alert('Account created successfully. Please check your email and verify your account, then sign in to pick a plan and start your 14-day free trial.')
+        alert('Account created successfully. Sign in to pick a plan and start your 14-day free trial.')
 
         router.push('/')
         setLoading(false)

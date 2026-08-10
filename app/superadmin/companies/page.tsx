@@ -63,10 +63,10 @@ export default async function CompaniesPage() {
         ).length
         const leadsAllTime = (leadsByCompany.get(c.id) || []).length
         const overCap = tier.leadLimit !== null && leadsThisPeriod > tier.leadLimit
-        // Signup writes 'trial' with a trial_ends_at to satisfy the RLS insert
-        // policy on `companies`, so only a Stripe subscription proves a card
-        // was ever given. Without one this is a signup that stalled at the
-        // plan picker, not a trial that's running down.
+        // Signup writes 'trial' with a trial_ends_at to every new row, so only
+        // a Stripe subscription proves a card was ever given. Without one this
+        // is a signup that stalled at the plan picker, not a trial that's
+        // running down.
         const status = c.stripe_subscription_id ? c.subscription_status || 'no_card' : 'no_card'
         const trialDaysLeft = status === 'trial' ? daysUntil(c.trial_ends_at) : null
 

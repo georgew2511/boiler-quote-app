@@ -9,10 +9,9 @@ const STATUS_STYLES: Record<string, string> = {
     cancelled: 'bg-red-100 text-red-700',
 }
 
-// Signup writes subscription_status: 'trial' with a trial_ends_at to satisfy
-// the RLS insert policy on `companies`, so those fields alone can't tell a
-// real trial from an account that never got past the plan picker. Only a
-// Stripe subscription proves a card was given.
+// Signup writes subscription_status: 'trial' with a trial_ends_at to every new
+// row, so those fields alone can't tell a real trial from an account that never
+// got past the plan picker. Only a Stripe subscription proves a card was given.
 function displayStatus(company: { subscription_status: string | null; stripe_subscription_id: string | null }) {
     if (!company.stripe_subscription_id) return 'no_card'
     return company.subscription_status || 'no_card'
