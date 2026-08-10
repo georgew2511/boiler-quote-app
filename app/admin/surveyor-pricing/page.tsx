@@ -175,7 +175,7 @@ export default async function SurveyorPricingPage({
 
         const key = (formData.get('delete_key')?.toString() || '').trim()
         if (!key) {
-            redirect('/admin/surveyor-pricing?error=missing_fields')
+            redirect('/admin/surveyor-pricing?error=delete_no_key')
         }
 
         // Record the key first so that even if the deletes below partially fail,
@@ -285,6 +285,12 @@ export default async function SurveyorPricingPage({
                 {deleted && (
                     <div className="mt-6 rounded-2xl bg-emerald-50 px-5 py-3 text-sm font-medium text-emerald-800">
                         Item deleted from every company. Existing quotes are unaffected.
+                    </div>
+                )}
+
+                {saveError === 'delete_no_key' && (
+                    <div className="mt-6 rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-800">
+                        Delete didn&apos;t receive an item key, so nothing was deleted. Reload the page and try again.
                     </div>
                 )}
 
@@ -501,14 +507,14 @@ export default async function SurveyorPricingPage({
                                                 </td>
                                                 {company.isPlatformAdmin && (
                                                     <td className="py-3 pl-4 text-right">
-                                                        {/* formAction (rather than a nested <form>, which is invalid
-                                                            HTML) reroutes this one submit to the delete action. The
-                                                            clicked button's name/value identifies the row. */}
+                                                        {/* The `form` attribute submits the matching delete form
+                                                            rendered below, outside this one. Don't switch this to
+                                                            formAction with name/value on the button: React doesn't
+                                                            forward a submitter's name/value to a server action, so
+                                                            the key arrived empty and nothing was ever deleted. */}
                                                         <button
                                                             type="submit"
-                                                            name="delete_key"
-                                                            value={item.key}
-                                                            formAction={deletePricingItem}
+                                                            form={`delete-${item.id}`}
                                                             className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50"
                                                         >
                                                             Delete
@@ -532,6 +538,17 @@ export default async function SurveyorPricingPage({
                         </div>
                     </form>
                 )}
+
+                {/* One delete form per item, rendered outside the save form above
+                    (nesting forms is invalid HTML). Each Delete button targets its
+                    own form by id via the `form` attribute, so the key travels in a
+                    real hidden input rather than on the submitter. */}
+                {company.isPlatformAdmin &&
+                    pricing.map((item) => (
+                        <form key={item.id} id={`delete-${item.id}`} action={deletePricingItem} className="hidden">
+                            <input type="hidden" name="delete_key" value={item.key} />
+                        </form>
+                    ))}
 
                 {hasPricing && (
                     <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
