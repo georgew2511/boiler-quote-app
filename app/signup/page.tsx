@@ -28,6 +28,13 @@ export default function SignupPage() {
             email,
             password,
             options: {
+                // Sent explicitly so the confirmation link lands on our callback
+                // route on whichever host they signed up from, rather than on
+                // whatever Site URL the Supabase project happens to be set to.
+                // That default had been pointing at the protected Vercel
+                // deployment domain, so verifying bounced people to a Vercel
+                // login page.
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
                 data: {
                     company_name: companyName,
                     full_name: name,
