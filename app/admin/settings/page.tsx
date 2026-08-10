@@ -1,13 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { hasFeature, SELF_SERVE_TIERS } from '@/lib/subscriptionTiers'
 
 export default function SettingsPage() {
     const logoInputRef = useRef<HTMLInputElement>(null)
     const [companyId, setCompanyId] = useState<string | null>(null)
     const [uploadingLogo, setUploadingLogo] = useState(false)
+    // "Branding & colour customisation" is a Pro line item on the pricing page.
+    const [canBrand, setCanBrand] = useState(true)
     const router = useRouter()
 
     const supabase = createClient()
@@ -142,6 +146,7 @@ export default function SettingsPage() {
 
 
                 setCompanyId(company.id)
+                setCanBrand(hasFeature(company, 'branding'))
                 setSettings((prev) => ({
                     ...prev,
                     company_name: company.company_name || '',
@@ -319,20 +324,22 @@ export default function SettingsPage() {
                             matches the rest of your website.
                         </p>
 
-                        <div className="mt-6 flex flex-wrap items-center gap-4">
+                        <div className={`mt-6 flex flex-wrap items-center gap-4 ${canBrand ? '' : 'opacity-50'}`}>
                             <input
                                 type="color"
+                                disabled={!canBrand}
                                 value={settings.primary_colour || '#16a34a'}
                                 onChange={(e) => setSettings({ ...settings, primary_colour: e.target.value })}
-                                className="h-14 w-14 cursor-pointer rounded-2xl border border-slate-300 p-1"
+                                className="h-14 w-14 cursor-pointer rounded-2xl border border-slate-300 p-1 disabled:cursor-not-allowed"
                             />
 
                             <input
                                 type="text"
+                                disabled={!canBrand}
                                 value={settings.primary_colour || ''}
                                 onChange={(e) => setSettings({ ...settings, primary_colour: e.target.value })}
                                 placeholder="#16a34a"
-                                className="w-36 rounded-2xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                className="w-36 rounded-2xl border border-slate-300 bg-white px-4 py-3 font-mono text-sm shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                             />
 
                             <div
@@ -342,6 +349,16 @@ export default function SettingsPage() {
                                 Preview Button
                             </div>
                         </div>
+
+                        {!canBrand && (
+                            <div className="mt-5 rounded-2xl bg-slate-50 px-5 py-4 text-sm text-slate-600">
+                                Custom branding colours are part of the {SELF_SERVE_TIERS.pro.name} plan.{' '}
+                                <Link href="/admin/billing" className="font-semibold text-blue-600 underline">
+                                    Upgrade to {SELF_SERVE_TIERS.pro.name}
+                                </Link>{' '}
+                                to match the calculator to your own website — it takes effect immediately.
+                            </div>
+                        )}
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">

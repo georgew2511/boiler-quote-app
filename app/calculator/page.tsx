@@ -353,6 +353,25 @@ function CalculatorContent() {
     loadTracking()
   }, [companyId])
 
+  // Which of the optional next-step actions this company's plan includes.
+  useEffect(() => {
+    if (!companyId) return
+
+    fetch(`/api/company-features?company_id=${companyId}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data) {
+          setFeatures({
+            surveyBooking: !!data.surveyBooking,
+            photoSurveys: !!data.photoSurveys,
+          })
+        }
+      })
+      .catch(() => {
+        // Leave the defaults in place — the quote itself still works.
+      })
+  }, [companyId])
+
   const [customer, setCustomer] = useState({
     name: '',
     email: '',
@@ -372,6 +391,10 @@ function CalculatorContent() {
     date: '',
     timeSlot: '',
   })
+  // Plan entitlements for whichever company this calculator is embedded for.
+  // Defaults to off and is only turned on by a successful lookup — denying by
+  // default is the safe direction for a paid feature.
+  const [features, setFeatures] = useState({ surveyBooking: false, photoSurveys: false })
   const [phoneError, setPhoneError] = useState('')
   const [showFinanceModal, setShowFinanceModal] = useState(false)
   const [financeBoiler, setFinanceBoiler] = useState<any>(null)
@@ -563,6 +586,16 @@ function CalculatorContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Entitlements resolve after that deep link has already moved the step, and
+  // an old email could still point at ?step=photo for a company that has since
+  // dropped to a plan without photo surveys. Send them back to their quote
+  // rather than leaving them on a step that renders nothing.
+  useEffect(() => {
+    if (step === photoStep && !features.photoSurveys) {
+      setStep(recommendationsStep)
+    }
+  }, [step, photoStep, recommendationsStep, features.photoSurveys])
 
   const visibleQuestions = questions.filter(
     (question) => !question.showIf || question.showIf(answers)
@@ -1216,7 +1249,7 @@ function CalculatorContent() {
           </>
         )}
 
-        {step === photoStep && (
+        {step === photoStep && features.photoSurveys && (
           <>
             <h1 className="text-3xl font-bold text-center">
               Almost there, {customer.name}
@@ -1384,10 +1417,12 @@ function CalculatorContent() {
             <div className="max-w-2xl mx-auto">
               <div className="text-center mb-8">
                 <h1 className="text-4xl font-bold text-slate-900">
-                  Let's Schedule Your Survey
+                  {features.surveyBooking ? "Let's Schedule Your Survey" : 'Request Your Survey'}
                 </h1>
                 <p className="mt-3 text-lg text-slate-600">
-                  Our team will visit at a time that suits you to assess your home and confirm your fixed price
+                  {features.surveyBooking
+                    ? 'Our team will visit at a time that suits you to assess your home and confirm your fixed price'
+                    : "Leave your address and our team will be in touch to arrange a time that suits you"}
                 </p>
               </div>
 
@@ -1496,7 +1531,10 @@ function CalculatorContent() {
                   </div>
                 </div>
 
-                {/* Date & Time section */}
+                {/* Date & Time section — self-service slot picking is a paid
+                    tier up from the basic survey request, which just captures
+                    the address for the company to follow up on. */}
+                {features.surveyBooking && (
                 <div className="rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-8">
                   <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                     📅 Pick a Date & Time
@@ -1554,14 +1592,17 @@ function CalculatorContent() {
                     </div>
                   </div>
                 </div>
+                )}
 
                 <button
                   onClick={async () => {
-                    const day = new Date(surveyBooking.date).getDay()
+                    if (features.surveyBooking) {
+                      const day = new Date(surveyBooking.date).getDay()
 
-                    if (day === 0 || day === 6) {
-                      alert('Please select Monday to Friday')
-                      return
+                      if (day === 0 || day === 6) {
+                        alert('Please select Monday to Friday')
+                        return
+                      }
                     }
 
                     // GTM event: survey_requested
@@ -1579,15 +1620,26 @@ function CalculatorContent() {
                       .from('leads')
                       .update({
                         status: 'Home Survey Requested',
-                        pipeline_stage: 'Survey Booked',
+                        // Without slot picking nothing is actually booked yet —
+                        // the company still has to ring round, so the lead
+                        // shouldn't land in the pipeline as a confirmed survey.
+                        pipeline_stage: features.surveyBooking ? 'Survey Booked' : 'Survey Requested',
                         survey_address: `${surveyBooking.houseName}, ${surveyBooking.addressLine1}, ${surveyBooking.addressLine2}, ${surveyBooking.town}, ${surveyBooking.county}, ${surveyBooking.postcode}`,
-                        survey_date: surveyBooking.date,
-                        survey_time_slot: surveyBooking.timeSlot,
+                        ...(features.surveyBooking
+                          ? {
+                            survey_date: surveyBooking.date,
+                            survey_time_slot: surveyBooking.timeSlot,
+                          }
+                          : {}),
                         last_updated: new Date().toISOString(),
                       })
                       .eq('id', leadId)
 
-                    alert('Survey booked successfully')
+                    alert(
+                      features.surveyBooking
+                        ? 'Survey booked successfully'
+                        : "Survey requested — we'll be in touch shortly to arrange a time."
+                    )
                     setStep(recommendationsStep)
                   }}
                   disabled={
@@ -1595,12 +1647,11 @@ function CalculatorContent() {
                     !surveyBooking.addressLine1 ||
                     !surveyBooking.town ||
                     !surveyBooking.postcode ||
-                    !surveyBooking.date ||
-                    !surveyBooking.timeSlot
+                    (features.surveyBooking && (!surveyBooking.date || !surveyBooking.timeSlot))
                   }
                   className="w-full rounded-2xl bg-[var(--brand)] p-5 font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  ✓ Confirm Survey Booking
+                  {features.surveyBooking ? '✓ Confirm Survey Booking' : '✓ Request My Survey'}
                 </button>
 
                 <button
@@ -1698,8 +1749,8 @@ function CalculatorContent() {
 
                 <div className="mt-6 rounded-xl bg-gray-50 p-5">
                   {/* Photo Verification / Home Survey block - moved from above */}
-                  <div className="mt-6 grid gap-4 md:grid-cols-2">
-                    {photosUploaded ? (
+                  <div className={`mt-6 grid gap-4 ${features.photoSurveys ? 'md:grid-cols-2' : ''}`}>
+                    {!features.photoSurveys ? null : photosUploaded ? (
                       <div className="rounded-2xl border-2 border-[var(--brand)] bg-[color-mix(in_srgb,var(--brand)_8%,white)] p-6 text-left">
                         <h3 className="text-xl font-bold">✓ Photos Uploaded</h3>
                         <p className="mt-2 text-gray-600">
@@ -1736,9 +1787,13 @@ function CalculatorContent() {
                       }}
                       className="rounded-2xl border-2 border-blue-600 bg-blue-50 p-6 text-left transition hover:bg-blue-100"
                     >
-                      <h3 className="text-xl font-bold">🏠 Book a Home Survey</h3>
+                      <h3 className="text-xl font-bold">
+                        {features.surveyBooking ? '🏠 Book a Home Survey' : '🏠 Request a Home Survey'}
+                      </h3>
                       <p className="mt-2 text-gray-600">
-                        Prefer a home visit? Request a survey and we'll contact you to arrange an appointment.
+                        {features.surveyBooking
+                          ? "Prefer a home visit? Pick a date and time that suits you."
+                          : "Prefer a home visit? Request a survey and we'll contact you to arrange an appointment."}
                       </p>
                     </button>
                   </div>
@@ -1751,7 +1806,16 @@ function CalculatorContent() {
                   <h3 className="font-semibold">What happens next?</h3>
 
                   <div className="mt-4 space-y-3 text-sm text-gray-700">
-                    <p><strong>1.</strong> {photosUploaded ? '✓ Photos uploaded' : 'Upload your photos'}</p>
+                    <p>
+                      <strong>1.</strong>{' '}
+                      {features.photoSurveys
+                        ? photosUploaded
+                          ? '✓ Photos uploaded'
+                          : 'Upload your photos'
+                        : features.surveyBooking
+                          ? 'Book your home survey'
+                          : 'Request your home survey'}
+                    </p>
                     <p><strong>2.</strong> Surrey Gas reviews your installation requirements</p>
                     <p><strong>3.</strong> We confirm your guaranteed fixed price</p>
                     <p><strong>4.</strong> Choose an installation date that suits you</p>
@@ -1771,29 +1835,40 @@ function CalculatorContent() {
                   <h4 className="font-semibold">Your next steps</h4>
 
                   <div className="mt-4 space-y-4 text-sm">
-                    <div>1. {photosUploaded ? '✓ Photos uploaded' : 'Upload photos'}</div>
+                    <div>
+                      1.{' '}
+                      {features.photoSurveys
+                        ? photosUploaded
+                          ? '✓ Photos uploaded'
+                          : 'Upload photos'
+                        : features.surveyBooking
+                          ? 'Book your survey'
+                          : 'Request your survey'}
+                    </div>
                     <div>2. We review everything</div>
                     <div>3. Fixed price confirmed</div>
                     <div>4. Choose installation date</div>
                   </div>
                 </div>
 
-                <button
-                  className="mt-8 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white"
-                  onClick={() => {
-                    setSurveyRequested(false)
-                    setStep(photoStep)
-                  }}
-                >
-                  Upload Photos
-                </button>
+                {features.photoSurveys && (
+                  <button
+                    className="mt-8 w-full rounded-xl bg-[var(--brand)] p-4 font-semibold text-white"
+                    onClick={() => {
+                      setSurveyRequested(false)
+                      setStep(photoStep)
+                    }}
+                  >
+                    Upload Photos
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setStep(surveyStep)
                   }}
-                  className="mt-3 w-full rounded-xl border-2 border-blue-600 bg-white p-4 font-semibold text-blue-700"
+                  className={`w-full rounded-xl border-2 border-blue-600 bg-white p-4 font-semibold text-blue-700 ${features.photoSurveys ? 'mt-3' : 'mt-8'}`}
                 >
-                  Book Home Survey
+                  {features.surveyBooking ? 'Book Home Survey' : 'Request Home Survey'}
                 </button>
 
                 <button

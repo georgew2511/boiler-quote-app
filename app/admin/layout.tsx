@@ -11,24 +11,31 @@ export default async function AdminLayout({
 }) {
     const company = await getCurrentCompany()
 
-    // Hard lock: no active paid subscription and the 14-day trial has run
-    // out (or a paid subscription lapsed/failed). Grandfathered legacy
+    // Hard lock by default: access requires either a live paid subscription or
+    // an unexpired trial, and nothing else counts. Written as an allowlist
+    // deliberately — the old version only locked on three known-bad statuses,
+    // so a company with no subscription at all (trial_ends_at still null) fell
+    // through every branch and got the dashboard for free. Grandfathered legacy
     // companies and the super-admin account itself are never locked.
     const hasActivePaidPlan =
         ['starter', 'growth', 'pro'].includes(company.subscription_tier || '') &&
         company.subscription_status === 'active'
     const isGrandfathered = company.subscription_tier === 'grandfathered'
-    const trialExpired = company.trial_ends_at && new Date(company.trial_ends_at) < new Date()
+    const trialExpired = !!company.trial_ends_at && new Date(company.trial_ends_at) < new Date()
+    const inActiveTrial = company.subscription_status === 'trial' && !trialExpired
 
-    let lockReason: 'trial_ended' | 'past_due' | 'cancelled' | null = null
+    let lockReason: 'no_subscription' | 'trial_ended' | 'past_due' | 'cancelled' | null = null
 
-    if (!company.isSuperAdmin && !isGrandfathered && !hasActivePaidPlan) {
+    if (!company.isSuperAdmin && !isGrandfathered && !hasActivePaidPlan && !inActiveTrial) {
         if (company.subscription_status === 'past_due') {
             lockReason = 'past_due'
         } else if (company.subscription_status === 'cancelled') {
             lockReason = 'cancelled'
         } else if (trialExpired) {
             lockReason = 'trial_ended'
+        } else {
+            // Never subscribed — a fresh signup arriving for the first time.
+            lockReason = 'no_subscription'
         }
     }
 

@@ -47,16 +47,17 @@ export default function SignupPage() {
         }
 
         if (data.user) {
-            const trialEndDate = new Date()
-            trialEndDate.setDate(trialEndDate.getDate() + 14)
-
+            // No trial is granted here. The account starts with no subscription
+            // at all — the 14-day trial begins only once card details are taken
+            // through Stripe Checkout, which happens on first sign-in when
+            // AdminLayout shows the plan picker. Leaving trial_ends_at null is
+            // what keeps them eligible for that first trial.
             const { data: company, error: companyError } = await supabaseBrowser
                 .from('companies')
                 .insert({
                     company_name: companyName,
                     owner_user_id: data.user.id,
-                    subscription_status: 'trial',
-                    trial_ends_at: trialEndDate.toISOString(),
+                    subscription_status: 'pending',
                 })
                 .select()
                 .single()
@@ -137,7 +138,7 @@ export default function SignupPage() {
             })
         }
 
-        alert('Account created successfully. Please check your email and verify your account before signing in.')
+        alert('Account created successfully. Please check your email and verify your account, then sign in to pick a plan and start your 14-day free trial.')
 
         router.push('/')
         setLoading(false)

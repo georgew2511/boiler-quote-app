@@ -51,13 +51,11 @@ export default function LoginPage() {
                 .maybeSingle()
 
             if (company) {
-                if (
-                    company.subscription_status !== 'trial' &&
-                    company.subscription_status !== 'active'
-                ) {
-                    alert('Your subscription is not active. Please contact support.')
-                    return
-                }
+                // 'pending' is a brand-new signup who hasn't picked a plan yet —
+                // let them through so AdminLayout can show them the trial offer.
+                // Genuinely dead accounts (past_due, cancelled) also go to
+                // /admin, where the lock screen gives them a way to fix it
+                // themselves rather than a support dead end.
                 router.push('/admin')
                 return
             }

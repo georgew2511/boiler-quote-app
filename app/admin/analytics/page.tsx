@@ -3,6 +3,8 @@ import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { getLeadValue } from '@/lib/leadValue'
 import { RANGE_PRESETS, resolveDateRange, isInRange } from '@/lib/dateRanges'
+import { hasFeature } from '@/lib/subscriptionTiers'
+import FeatureLock from '../FeatureLock'
 
 const SOURCE_COLORS = [
     'bg-amber-400',
@@ -115,6 +117,17 @@ export default async function AnalyticsPage({
 }) {
     const params = await searchParams
     const company = await getCurrentCompany()
+
+    if (!hasFeature(company, 'analytics')) {
+        return (
+            <FeatureLock
+                feature="analytics"
+                title="Analytics"
+                blurb="See where your leads come from, which surveyors convert best, and what your pipeline is actually worth."
+            />
+        )
+    }
+
     const supabase = await createClient()
     const range = resolveDateRange(params)
 

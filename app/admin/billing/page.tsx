@@ -4,6 +4,10 @@ import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { getTierDefinition, SELF_SERVE_TIERS } from '@/lib/subscriptionTiers'
 import { UpgradeButton, ManageBillingButton } from './BillingActions'
 
+function daysUntil(date: Date) {
+    return Math.max(0, Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+}
+
 export default async function BillingPage({
     searchParams,
 }: {
@@ -26,6 +30,15 @@ export default async function BillingPage({
     const limit = currentTier.leadLimit
     const overCap = limit !== null && used > limit
     const nearCap = limit !== null && !overCap && used >= limit * 0.8
+
+    const onTrial = company.subscription_status === 'trial' && !!company.trial_ends_at
+    const trialEndsAt = onTrial ? new Date(company.trial_ends_at) : null
+    const trialDaysLeft = trialEndsAt ? daysUntil(trialEndsAt) : 0
+
+    // Only a live subscription makes the plan grid a set of upgrades. Without
+    // one, every tier is simply available to buy.
+    const hasLivePlan =
+        company.subscription_status === 'active' || company.subscription_status === 'trial'
 
     return (
         <main className="min-h-screen bg-[#f5f7fb] p-8">
@@ -58,6 +71,17 @@ export default async function BillingPage({
                         {company.stripe_customer_id && <ManageBillingButton companyId={company.id} />}
                     </div>
 
+                    {onTrial && trialEndsAt && (
+                        <div className="mt-5 rounded-2xl bg-blue-50 px-5 py-4 text-sm text-blue-900">
+                            <strong>
+                                Free trial — {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} left.
+                            </strong>{' '}
+                            Your card will be charged £{(currentTier.priceMonthlyPence / 100).toFixed(2)} on{' '}
+                            {trialEndsAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })},
+                            then monthly. Cancel before then via Manage Billing and you won&apos;t be charged.
+                        </div>
+                    )}
+
                     <div className="mt-6">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-slate-600">
@@ -88,21 +112,48 @@ export default async function BillingPage({
                 </div>
 
                 <div className="mt-8 grid gap-6 sm:grid-cols-3">
-                    {Object.values(SELF_SERVE_TIERS).map((tier) => (
-                        <div key={tier.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                            <div className="text-sm font-medium text-slate-500 uppercase">{tier.name}</div>
-                            <div className="mt-2 text-4xl font-bold">£{(tier.priceMonthlyPence / 100).toFixed(0)}</div>
-                            <div className="text-sm text-slate-500">per month</div>
-                            <div className="mt-2 text-sm text-slate-600">Up to {tier.leadLimit} leads/month</div>
+                    {Object.values(SELF_SERVE_TIERS).map((tier) => {
+                        const isCurrent = company.subscription_tier === tier.id
+                        // Upgrades apply instantly on the card already on file.
+                        // Plans below the current one are shown as included
+                        // rather than as a switch they can make themselves.
+                        const isUpgrade = hasLivePlan && tier.rank > currentTier.rank
+                        const isIncluded = hasLivePlan && tier.rank < currentTier.rank
 
-                            <UpgradeButton
-                                companyId={company.id}
-                                tier={tier.id as 'starter' | 'growth' | 'pro'}
-                                label={`Switch to ${tier.name}`}
-                                isCurrent={company.subscription_tier === tier.id}
-                            />
-                        </div>
-                    ))}
+                        return (
+                            <div
+                                key={tier.id}
+                                className={`rounded-3xl border bg-white p-6 shadow-sm ${isCurrent ? 'border-blue-300 ring-1 ring-blue-200' : 'border-slate-200'}`}
+                            >
+                                <div className="text-sm font-medium text-slate-500 uppercase">{tier.name}</div>
+                                <div className="mt-2 text-4xl font-bold">£{(tier.priceMonthlyPence / 100).toFixed(0)}</div>
+                                <div className="text-sm text-slate-500">per month</div>
+                                <div className="mt-2 text-sm text-slate-600">Up to {tier.leadLimit} leads/month</div>
+
+                                <ul className="mt-4 space-y-1.5 text-sm text-slate-600">
+                                    {tier.highlights.map((line) => (
+                                        <li key={line}>✓ {line}</li>
+                                    ))}
+                                </ul>
+
+                                {isUpgrade && (
+                                    <p className="mt-4 text-xs text-slate-500">
+                                        {onTrial
+                                            ? 'Applies straight away. Your free trial carries on as normal.'
+                                            : "Applies straight away. We'll charge the pro-rata difference for the rest of this month."}
+                                    </p>
+                                )}
+
+                                <UpgradeButton
+                                    companyId={company.id}
+                                    tier={tier.id as 'starter' | 'growth' | 'pro'}
+                                    label={isUpgrade ? `Upgrade to ${tier.name}` : `Switch to ${tier.name}`}
+                                    isCurrent={isCurrent}
+                                    isIncluded={isIncluded}
+                                />
+                            </div>
+                        )
+                    })}
                 </div>
 
                 <p className="mt-6 text-center text-sm text-slate-400">

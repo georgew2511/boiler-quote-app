@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 interface Surveyor {
     id: string
@@ -20,6 +21,9 @@ export default function SurveyorsPage() {
     const [newName, setNewName] = useState('')
     const [newEmail, setNewEmail] = useState('')
     const [copied, setCopied] = useState<string | null>(null)
+    // Set when the API refuses an add because the plan's surveyor allowance is
+    // already used up.
+    const [limitMessage, setLimitMessage] = useState<string | null>(null)
 
     useEffect(() => {
         const load = async () => {
@@ -47,6 +51,10 @@ export default function SurveyorsPage() {
             setSurveyors((prev) => [data, ...prev])
             setNewName('')
             setNewEmail('')
+            setLimitMessage(null)
+        } else {
+            const data = await res.json().catch(() => ({}))
+            setLimitMessage(data.error || 'Failed to add surveyor')
         }
         setAdding(false)
     }
@@ -117,6 +125,15 @@ export default function SurveyorsPage() {
                         {adding ? 'Adding…' : 'Add'}
                     </button>
                 </div>
+
+                {limitMessage && (
+                    <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        {limitMessage}{' '}
+                        <Link href="/admin/billing" className="font-semibold underline">
+                            View plans
+                        </Link>
+                    </div>
+                )}
             </div>
 
             {/* Surveyors list */}

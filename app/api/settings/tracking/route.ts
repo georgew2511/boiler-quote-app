@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
+import { hasFeature } from '@/lib/subscriptionTiers'
 
 export async function GET(request: Request) {
     try {
@@ -76,6 +77,15 @@ export async function POST(request: Request) {
         // authenticated user's own company to prevent cross-tenant writes.
         const { company_id: _ignored, ...settingsData } = body
         const company_id = company.id
+
+        // Branding colours are a Pro feature. The settings page disables the
+        // pickers below that tier, but the payload is still client-supplied,
+        // so drop the fields rather than trusting the form. Everything else in
+        // the save goes through untouched.
+        if (!hasFeature(company, 'branding')) {
+            delete settingsData.primary_colour
+            delete settingsData.secondary_colour
+        }
 
         const { data: existing, error: existingError } = await supabase
             .from('company_settings')
