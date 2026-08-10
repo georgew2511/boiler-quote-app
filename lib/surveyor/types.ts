@@ -180,10 +180,17 @@ export interface Boiler {
   active: boolean;
 }
 
+export type LogoBackdrop = "none" | "light" | "dark";
+
 export interface CompanySettings {
   companyName: string;
   logoSlug: string | null;
+  /** Percentage scale for the uploaded logo, 25–300. */
+  logoSize: number;
+  /** Plate drawn behind the logo, for logos that would otherwise vanish. */
+  logoBackdrop: LogoBackdrop;
   primaryColor: string;
+  secondaryColor: string;
   phone: string;
   email: string;
   website: string;
@@ -276,7 +283,14 @@ export function mapCompanySettings(row: Record<string, any>): CompanySettings {
   return {
     companyName: row.company_name ?? "Your Company",
     logoSlug: row.logo_url ?? null,
+    logoSize: Number(row.logo_size ?? 100),
+    // Falls back to 'none' when the column predates the migration, so quote
+    // pages keep rendering before it's applied.
+    logoBackdrop: (["none", "light", "dark"] as const).includes(row.logo_backdrop)
+      ? row.logo_backdrop
+      : "none",
     primaryColor: row.primary_colour ?? "#1d4ed8",
+    secondaryColor: row.secondary_colour ?? "#0f172a",
     phone: row.phone_number ?? "",
     email: row.email_address ?? "",
     website: row.website ?? "",
@@ -305,7 +319,10 @@ export function mapCompanySettings(row: Record<string, any>): CompanySettings {
 export const DEFAULT_SETTINGS: CompanySettings = {
   companyName: "Your Company",
   logoSlug: null,
+  logoSize: 100,
+  logoBackdrop: "none",
   primaryColor: "#1d4ed8",
+  secondaryColor: "#0f172a",
   phone: "",
   email: "",
   website: "",

@@ -27,6 +27,65 @@ function formatDuration(months: number): string {
   return `${months}-month`;
 }
 
+// Renders the company logo at the size they've configured, optionally on a
+// plate. A white or near-white logo is invisible against this page's white
+// background — and the company can't tell, because the same file looks right
+// to them in the dark admin sidebar. Rather than guess at logo brightness,
+// the plate is opt-in from settings.
+//
+// The dark plate is tinted from their secondary colour rather than pure black,
+// so it reads as a deliberate brand element rather than a box someone forgot
+// to remove.
+function CompanyLogo({
+  settings,
+  baseHeightPx,
+  className = "",
+}: {
+  settings: CompanySettings;
+  baseHeightPx: number;
+  className?: string;
+}) {
+  const height = baseHeightPx * (settings.logoSize / 100);
+
+  if (!settings.logoSlug) {
+    return (
+      <span className={`font-extrabold tracking-tight brand-text ${className}`}>
+        {settings.companyName}
+      </span>
+    );
+  }
+
+  const img = (
+    <img
+      src={settings.logoSlug}
+      alt={settings.companyName}
+      className="object-contain object-left max-w-full"
+      style={{ height: `${height}px` }}
+    />
+  );
+
+  if (settings.logoBackdrop === "none") {
+    return <div className={className}>{img}</div>;
+  }
+
+  const isDark = settings.logoBackdrop === "dark";
+
+  return (
+    <div className={className}>
+      <div
+        className="inline-flex items-center rounded-2xl px-4 py-2.5"
+        style={{
+          backgroundColor: isDark ? settings.secondaryColor : "#f1f5f9",
+          // Keeps the plate from reading as a hard block against the card.
+          boxShadow: isDark ? "none" : "inset 0 0 0 1px rgba(15,23,42,0.06)",
+        }}
+      >
+        {img}
+      </div>
+    </div>
+  );
+}
+
 function monthlyPayment(total: number, months: number, aprPercent: number): number {
   if (aprPercent === 0) return total / months;
   const r = aprPercent / 12 / 100;
@@ -255,10 +314,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
       {/* ── SAVE AS PDF BUTTON ── */}
       <div className="no-print sticky top-0 z-20 bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {settings.logoSlug
-            ? <img src={settings.logoSlug} alt={settings.companyName} className="h-7 sm:h-8 object-contain max-w-[120px] sm:max-w-none" />
-            : <span className="text-base sm:text-lg font-bold" style={{ color }}>{settings.companyName}</span>
-          }
+          <CompanyLogo settings={settings} baseHeightPx={32} className="max-w-[160px] sm:max-w-none text-base sm:text-lg" />
         </div>
         <button
           onClick={() => window.print()}
@@ -277,12 +333,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
             {/* ── Mobile hero layout ── */}
             <div className="sm:hidden flex flex-col gap-3 pb-4">
               {/* Logo */}
-              <div>
-                {settings.logoSlug
-                  ? <img src={settings.logoSlug} alt={settings.companyName} className="h-9 object-contain object-left" />
-                  : <span className="text-xl font-extrabold tracking-tight brand-text">{settings.companyName}</span>
-                }
-              </div>
+              <CompanyLogo settings={settings} baseHeightPx={36} className="text-xl" />
               {/* Price + boiler image side by side */}
               <div className="flex items-end gap-3">
                 <div className="rounded-2xl p-3 text-center brand-row flex-1">
@@ -324,10 +375,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
             <div className="hidden sm:flex items-stretch justify-between gap-6">
               {/* Left: logo + price */}
               <div className="flex flex-col gap-4 justify-between pb-6">
-                {settings.logoSlug
-                  ? <img src={settings.logoSlug} alt={settings.companyName} className="h-12 object-contain" />
-                  : <span className="text-2xl font-extrabold tracking-tight brand-text">{settings.companyName}</span>
-                }
+                <CompanyLogo settings={settings} baseHeightPx={48} className="text-2xl" />
                 <div className="rounded-2xl p-4 text-center min-w-[140px] brand-row">
                   <p className="text-xs font-semibold uppercase tracking-widest text-slate-500">Your quote</p>
                   <p className="text-3xl font-extrabold mt-1 brand-text">{fmt(quote.total)}</p>

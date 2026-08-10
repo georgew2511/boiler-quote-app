@@ -28,7 +28,7 @@ export async function GET(request: Request) {
             'zero_percent_term_3', 'quote_validity_days', 'workmanship_warranty_months',
             'google_reviews_url', 'trustpilot_url',
         ]
-        const optionalColumns = ['finance_disclosure', 'logo_size']
+        const optionalColumns = ['finance_disclosure', 'logo_size', 'logo_backdrop']
 
         let { data, error } = await supabase
             .from('company_settings')
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
         // 42703 = undefined_column (raw Postgres), PGRST204 = PostgREST's
         // "column not found in schema cache" — insert/update surface the
         // latter, select() surfaces the former. Check both.
-        const optionalColumns = ['finance_disclosure', 'logo_size']
+        const optionalColumns = ['finance_disclosure', 'logo_size', 'logo_backdrop']
         let data = { ...settingsData }
 
         if (existing?.id) {

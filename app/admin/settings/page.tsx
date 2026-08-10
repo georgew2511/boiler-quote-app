@@ -29,6 +29,7 @@ export default function SettingsPage() {
         company_name: '',
         logo_url: '',
         logo_size: 100,
+        logo_backdrop: 'none',
         primary_colour: '#16a34a',
         secondary_colour: '#0f172a',
         phone_number: '',
@@ -397,6 +398,67 @@ export default function SettingsPage() {
                                         />
                                         <p className="mt-2 text-sm text-gray-500">
                                             If your logo looks too small or too large in the sidebar, adjust it here.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {settings.logo_url && (
+                                    <div className="mt-6">
+                                        <label className="mb-2 block font-medium">Logo Background</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {([
+                                                { value: 'none', label: 'None' },
+                                                { value: 'light', label: 'Light' },
+                                                { value: 'dark', label: 'Dark' },
+                                            ] as const).map((option) => (
+                                                <button
+                                                    key={option.value}
+                                                    type="button"
+                                                    onClick={() => setSettings({ ...settings, logo_backdrop: option.value })}
+                                                    className={`rounded-xl border px-4 py-2 text-sm font-medium transition-all ${settings.logo_backdrop === option.value
+                                                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                                        }`}
+                                                >
+                                                    {option.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* The preview is the point of this control: the admin
+                                            sidebar is dark, so a white logo looks perfect here
+                                            while being invisible on the quote page. This shows
+                                            it against the white it will actually sit on. */}
+                                        <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-4">
+                                            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                How it looks on your quotes
+                                            </p>
+                                            <div
+                                                className="inline-flex items-center rounded-2xl"
+                                                style={{
+                                                    padding: settings.logo_backdrop === 'none' ? 0 : '10px 16px',
+                                                    backgroundColor:
+                                                        settings.logo_backdrop === 'dark'
+                                                            ? settings.secondary_colour || '#0f172a'
+                                                            : settings.logo_backdrop === 'light'
+                                                                ? '#f1f5f9'
+                                                                : 'transparent',
+                                                }}
+                                            >
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={settings.logo_url}
+                                                    alt="Logo preview"
+                                                    className="object-contain"
+                                                    style={{ height: `${48 * (settings.logo_size / 100)}px` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <p className="mt-2 text-sm text-slate-500">
+                                            Quote pages are white. If your logo has white or very pale
+                                            lettering it will disappear there — pick Dark to sit it on a
+                                            plate in your brand colour.
                                         </p>
                                     </div>
                                 )}
