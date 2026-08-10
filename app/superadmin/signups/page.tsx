@@ -4,9 +4,18 @@ const STATUS_STYLES: Record<string, string> = {
     active: 'bg-green-100 text-green-700',
     trial: 'bg-blue-100 text-blue-700',
     // Signed up but never entered card details — no trial started.
-    pending: 'bg-slate-100 text-slate-600',
+    no_card: 'bg-slate-100 text-slate-600',
     past_due: 'bg-amber-100 text-amber-700',
     cancelled: 'bg-red-100 text-red-700',
+}
+
+// Signup writes subscription_status: 'trial' with a trial_ends_at to satisfy
+// the RLS insert policy on `companies`, so those fields alone can't tell a
+// real trial from an account that never got past the plan picker. Only a
+// Stripe subscription proves a card was given.
+function displayStatus(company: { subscription_status: string | null; stripe_subscription_id: string | null }) {
+    if (!company.stripe_subscription_id) return 'no_card'
+    return company.subscription_status || 'no_card'
 }
 
 function daysUntil(dateStr: string | null) {
@@ -19,7 +28,7 @@ export default async function SignupsPage() {
 
     const { data: companies, error } = await adminClient
         .from('companies')
-        .select('id, company_name, owner_user_id, subscription_status, subscription_tier, trial_ends_at, created_at')
+        .select('id, company_name, owner_user_id, subscription_status, subscription_tier, stripe_subscription_id, trial_ends_at, created_at')
         .order('created_at', { ascending: false })
         .limit(100)
 
@@ -34,7 +43,13 @@ export default async function SignupsPage() {
                 const { data } = await adminClient.auth.admin.getUserById(c.owner_user_id)
                 ownerEmail = data?.user?.email || '-'
             }
-            return { ...c, ownerEmail, trialDaysLeft: c.subscription_status === 'trial' ? daysUntil(c.trial_ends_at) : null }
+            const status = displayStatus(c)
+            return {
+                ...c,
+                ownerEmail,
+                status,
+                trialDaysLeft: status === 'trial' ? daysUntil(c.trial_ends_at) : null,
+            }
         })
     )
 
@@ -63,8 +78,8 @@ export default async function SignupsPage() {
                                     {c.created_at ? new Date(c.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : '-'}
                                 </td>
                                 <td className="px-5 py-4">
-                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[c.subscription_status] || 'bg-slate-100 text-slate-600'}`}>
-                                        {c.subscription_status || 'unknown'}
+                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[c.status] || 'bg-slate-100 text-slate-600'}`}>
+                                        {c.status === 'no_card' ? 'No card' : c.status}
                                     </span>
                                     {c.trialDaysLeft !== null && (
                                         <div className={`mt-1 text-xs ${c.trialDaysLeft <= 3 ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>

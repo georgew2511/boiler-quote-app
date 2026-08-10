@@ -64,11 +64,13 @@ export async function POST(request: Request) {
 
         const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || ''
 
-        // One free trial per company, ever. trial_ends_at is only ever written
-        // by the Stripe webhook once a trial actually starts, so a null here
-        // means this company has never had one — anyone who cancels and comes
-        // back gets billed immediately instead of a second free fortnight.
-        const eligibleForTrial = !company.trial_ends_at && !company.stripe_subscription_id
+        // One free trial per company, ever. Keyed only on whether a Stripe
+        // subscription has ever existed: signup pre-fills trial_ends_at to
+        // satisfy the RLS insert policy, so that column can't distinguish a
+        // brand-new account from one that's already had its fortnight. The id
+        // is kept on the row after a cancellation, so anyone who cancels and
+        // comes back is billed immediately instead of trialling twice.
+        const eligibleForTrial = !company.stripe_subscription_id
 
         const session = await stripe.checkout.sessions.create({
             mode: 'subscription',

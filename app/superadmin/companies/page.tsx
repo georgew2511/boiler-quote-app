@@ -9,7 +9,7 @@ const STATUS_STYLES: Record<string, string> = {
     active: 'bg-green-100 text-green-700',
     trial: 'bg-blue-100 text-blue-700',
     // Signed up but never entered card details — no trial started.
-    pending: 'bg-slate-100 text-slate-600',
+    no_card: 'bg-slate-100 text-slate-600',
     past_due: 'bg-amber-100 text-amber-700',
     cancelled: 'bg-red-100 text-red-700',
 }
@@ -63,11 +63,17 @@ export default async function CompaniesPage() {
         ).length
         const leadsAllTime = (leadsByCompany.get(c.id) || []).length
         const overCap = tier.leadLimit !== null && leadsThisPeriod > tier.leadLimit
-        const trialDaysLeft = c.subscription_status === 'trial' ? daysUntil(c.trial_ends_at) : null
+        // Signup writes 'trial' with a trial_ends_at to satisfy the RLS insert
+        // policy on `companies`, so only a Stripe subscription proves a card
+        // was ever given. Without one this is a signup that stalled at the
+        // plan picker, not a trial that's running down.
+        const status = c.stripe_subscription_id ? c.subscription_status || 'no_card' : 'no_card'
+        const trialDaysLeft = status === 'trial' ? daysUntil(c.trial_ends_at) : null
 
         return {
             ...c,
             tier,
+            status,
             leadsThisPeriod,
             leadsAllTime,
             overCap,
@@ -77,16 +83,16 @@ export default async function CompaniesPage() {
 
     const totalCompanies = rows.length
     const statusCounts = rows.reduce<Record<string, number>>((acc, r) => {
-        const key = r.subscription_status || 'unknown'
+        const key = r.status || 'unknown'
         acc[key] = (acc[key] || 0) + 1
         return acc
     }, {})
     const estimatedMRR = rows
-        .filter((r) => r.subscription_status === 'active')
+        .filter((r) => r.status === 'active')
         .reduce((sum, r) => sum + r.tier.priceMonthlyPence, 0) / 100
     const overCapCount = rows.filter((r) => r.overCap).length
     const trialsEndingSoon = rows.filter(
-        (r) => r.subscription_status === 'trial' && r.trialDaysLeft !== null && r.trialDaysLeft <= 3
+        (r) => r.status === 'trial' && r.trialDaysLeft !== null && r.trialDaysLeft <= 3
     ).length
     const servicePlanAddonCount = rows.filter((r) => r.service_plans_addon).length
 
@@ -185,7 +191,8 @@ export default async function CompaniesPage() {
                     <div className="mt-1 text-3xl font-bold text-slate-900">{totalCompanies}</div>
                     <div className="mt-1 text-xs text-slate-400">
                         {statusCounts.active || 0} active · {statusCounts.trial || 0} trial ·{' '}
-                        {statusCounts.past_due || 0} past due · {statusCounts.cancelled || 0} cancelled
+                        {statusCounts.no_card || 0} no card · {statusCounts.past_due || 0} past due ·{' '}
+                        {statusCounts.cancelled || 0} cancelled
                     </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -258,8 +265,8 @@ export default async function CompaniesPage() {
                                     </form>
                                 </td>
                                 <td className="px-5 py-4">
-                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[c.subscription_status] || 'bg-slate-100 text-slate-600'}`}>
-                                        {c.subscription_status || 'unknown'}
+                                    <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_STYLES[c.status] || 'bg-slate-100 text-slate-600'}`}>
+                                        {c.status === 'no_card' ? 'No card' : c.status}
                                     </span>
                                     {c.trialDaysLeft !== null && (
                                         <div className={`mt-1 text-xs ${c.trialDaysLeft <= 3 ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>

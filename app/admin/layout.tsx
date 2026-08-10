@@ -12,29 +12,38 @@ export default async function AdminLayout({
     const company = await getCurrentCompany()
 
     // Hard lock by default: access requires either a live paid subscription or
-    // an unexpired trial, and nothing else counts. Written as an allowlist
-    // deliberately — the old version only locked on three known-bad statuses,
-    // so a company with no subscription at all (trial_ends_at still null) fell
-    // through every branch and got the dashboard for free. Grandfathered legacy
+    // a trial backed by a real Stripe subscription, and nothing else counts.
+    // Written as an allowlist deliberately — the old version only locked on
+    // three known-bad statuses, so a company that had never paid fell through
+    // every branch and got the dashboard for free. Grandfathered legacy
     // companies and the super-admin account itself are never locked.
+    //
+    // The trial check keys off stripe_subscription_id rather than the status
+    // and dates, because signup has to write subscription_status: 'trial' with
+    // a trial_ends_at to satisfy the RLS insert policy on `companies` — so
+    // those two fields say nothing about whether a card was ever given.
     const hasActivePaidPlan =
         ['starter', 'growth', 'pro'].includes(company.subscription_tier || '') &&
         company.subscription_status === 'active'
     const isGrandfathered = company.subscription_tier === 'grandfathered'
+    const hasSubscribed = !!company.stripe_subscription_id
     const trialExpired = !!company.trial_ends_at && new Date(company.trial_ends_at) < new Date()
-    const inActiveTrial = company.subscription_status === 'trial' && !trialExpired
+    const inActiveTrial = hasSubscribed && company.subscription_status === 'trial' && !trialExpired
 
     let lockReason: 'no_subscription' | 'trial_ended' | 'past_due' | 'cancelled' | null = null
 
     if (!company.isSuperAdmin && !isGrandfathered && !hasActivePaidPlan && !inActiveTrial) {
-        if (company.subscription_status === 'past_due') {
+        if (!hasSubscribed) {
+            // Signed up but never gave a card — checked before the status
+            // branches below, whose values are placeholders until they do.
+            lockReason = 'no_subscription'
+        } else if (company.subscription_status === 'past_due') {
             lockReason = 'past_due'
         } else if (company.subscription_status === 'cancelled') {
             lockReason = 'cancelled'
         } else if (trialExpired) {
             lockReason = 'trial_ended'
         } else {
-            // Never subscribed — a fresh signup arriving for the first time.
             lockReason = 'no_subscription'
         }
     }

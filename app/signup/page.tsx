@@ -47,17 +47,25 @@ export default function SignupPage() {
         }
 
         if (data.user) {
-            // No trial is granted here. The account starts with no subscription
-            // at all — the 14-day trial begins only once card details are taken
-            // through Stripe Checkout, which happens on first sign-in when
-            // AdminLayout shows the plan picker. Leaving trial_ends_at null is
-            // what keeps them eligible for that first trial.
+            const trialEndDate = new Date()
+            trialEndDate.setDate(trialEndDate.getDate() + 14)
+
+            // These two fields have to keep their original values: the RLS
+            // insert policy on `companies` (defined in the Supabase dashboard,
+            // not in supabase/migrations) checks them, and writing anything
+            // else fails with "new row violates row-level security policy".
+            //
+            // So they no longer decide access. What actually grants the
+            // dashboard is a Stripe subscription — stripe_subscription_id is
+            // null until a card has been taken, and AdminLayout gates on that.
+            // Treat the row as "signed up, no card yet" until then.
             const { data: company, error: companyError } = await supabaseBrowser
                 .from('companies')
                 .insert({
                     company_name: companyName,
                     owner_user_id: data.user.id,
-                    subscription_status: 'pending',
+                    subscription_status: 'trial',
+                    trial_ends_at: trialEndDate.toISOString(),
                 })
                 .select()
                 .single()
