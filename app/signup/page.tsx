@@ -49,16 +49,6 @@ export default function SignupPage() {
             return
         }
 
-        // Supabase returns a decoy user with no identities when the email is
-        // already registered, rather than leaking that it exists. Without this
-        // check the flow carries on and fails further down on a confusing RLS
-        // error instead of telling them they already have an account.
-        if (data.user && data.user.identities && data.user.identities.length === 0) {
-            alert('An account with that email already exists. Try signing in instead.')
-            setLoading(false)
-            return
-        }
-
         if (data.user) {
             // Company creation, pricing and boilers are all seeded server-side
             // on the service-role client. They used to run here against the
@@ -67,7 +57,12 @@ export default function SignupPage() {
             // no session, every insert ran as `anon`, and signup failed on
             // "new row violates row-level security policy". Doing it in a route
             // makes the flow work either way.
-            let completeResult: { companyId?: string; error?: string } = {}
+            let completeResult: {
+                companyId?: string
+                alreadyExisted?: boolean
+                error?: string
+            } = {}
+            let completeStatus = 0
 
             try {
                 const response = await fetch('/api/signup/complete', {
@@ -75,9 +70,26 @@ export default function SignupPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userId: data.user.id }),
                 })
+                completeStatus = response.status
                 completeResult = await response.json()
             } catch {
                 completeResult = { error: 'Network error' }
+            }
+
+            // Whether the email was already taken is decided here rather than
+            // guessed from the signUp response. Supabase deliberately obscures
+            // that case — it returns a decoy user rather than an error — and
+            // the shape of that decoy isn't something to bet the whole signup
+            // flow on. An earlier version keyed off an empty `identities`
+            // array, which is unverifiable from the admin API and would have
+            // blocked every signup had the assumption been wrong.
+            //
+            // A company that already exists, or a user id that doesn't resolve
+            // (the decoy case), both mean: this person already has an account.
+            if (completeResult.alreadyExisted || completeStatus === 404) {
+                alert('An account with that email already exists. Try signing in instead.')
+                setLoading(false)
+                return
             }
 
             if (!completeResult.companyId) {
