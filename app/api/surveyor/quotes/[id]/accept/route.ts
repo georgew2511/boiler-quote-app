@@ -56,7 +56,7 @@ export async function POST(
 
     const { data: company } = await supabase
         .from('companies')
-        .select('company_name')
+        .select('company_name, owner_user_id')
         .eq('id', quote.company_id)
         .single()
 
@@ -65,6 +65,20 @@ export async function POST(
     const companyEmail = settings?.email_address ?? ''
     const fromEmail = settings?.from_email ?? process.env.RESEND_FROM_EMAIL ?? 'noreply@relode.io'
     const replyTo = (settings?.reply_to_email ?? companyEmail) || undefined
+
+    // Who gets the internal "quote accepted" alert. Most companies fill in
+    // email_address, but it's optional — without a fallback those companies
+    // were never told a quote had been accepted, and nothing errored.
+    // Deliberately separate from companyEmail above: that one is shown to the
+    // homeowner in the footer and used as reply-to, so the owner's private
+    // signup address must never be substituted into it.
+    let notifyEmail = companyEmail.trim()
+
+    if (!notifyEmail && company?.owner_user_id) {
+        const { data: owner, error: ownerError } = await supabase.auth.admin.getUserById(company.owner_user_id)
+        if (ownerError) console.error('Failed to load owner for accept notification:', ownerError.message)
+        notifyEmail = owner?.user?.email ?? ''
+    }
 
     const quoteRef = id.slice(-8).toUpperCase()
     const tierLabel = optionLabel || 'selected'
@@ -133,11 +147,11 @@ export async function POST(
 
     const errors: string[] = []
 
-    if (companyEmail) {
+    if (notifyEmail) {
         try {
             await resend.emails.send({
                 from: fromEmail,
-                to: companyEmail,
+                to: notifyEmail,
                 subject: `Quote accepted — ${customerName}, ${postcode} (${tierLabel})`,
                 html: companyHtml,
             })
@@ -145,6 +159,9 @@ export async function POST(
             console.error('Company notification email failed:', e)
             errors.push('company')
         }
+    } else {
+        console.error(`No notification address for company ${quote.company_id} — accept alert not sent`)
+        errors.push('company-no-address')
     }
 
     try {
