@@ -93,15 +93,17 @@ function CompanyLogo({
 function AskQuestionButton({
   onClick,
   variant,
+  className = "",
 }: {
   onClick: () => void;
   variant: "inline" | "block";
+  className?: string;
 }) {
   if (variant === "block") {
     return (
       <button
         onClick={onClick}
-        className="no-print w-full mt-2 py-2.5 rounded-xl font-semibold text-sm text-slate-600 border border-slate-200 bg-white transition-all hover:bg-slate-50 active:scale-95"
+        className={`no-print w-full py-2.5 rounded-xl font-semibold text-sm text-slate-600 border border-slate-200 bg-white transition-all hover:bg-slate-50 active:scale-95 ${className}`}
       >
         Ask a question
       </button>
@@ -395,13 +397,13 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                 </div>
               )}
               {/* Accept CTA */}
+              <AskQuestionButton variant="block" className="mb-2" onClick={() => setShowQuestion(true)} />
               <button
                 onClick={() => setShowConfirm(true)}
                 className="no-print w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
               >
                 Accept quote
               </button>
-              <AskQuestionButton variant="block" onClick={() => setShowQuestion(true)} />
             </div>
 
             {/* ── Desktop hero layout ── */}
@@ -440,6 +442,7 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                   </div>
                 )}
                 <div className="no-print mt-4">
+                  <AskQuestionButton variant="block" className="mb-2" onClick={() => setShowQuestion(true)} />
                   <button
                     onClick={() => setShowConfirm(true)}
                     className="w-full py-2.5 px-4 rounded-xl text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95 brand-bg"
@@ -449,7 +452,6 @@ export default function CustomerQuote({ quoteId, quoteResult, survey, createdAt,
                   <p className="text-[10px] text-slate-400 mt-1.5 leading-tight">
                     {quote.boilerName} · {fmt(total)}
                   </p>
-                  <AskQuestionButton variant="block" onClick={() => setShowQuestion(true)} />
                 </div>
               </div>
             </div>
