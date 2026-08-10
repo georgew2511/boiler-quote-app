@@ -126,10 +126,12 @@ export default function SignupPage() {
                 }
             }
 
+            // Also seeds the company_settings row server-side, which is why
+            // companyId is sent — see createCompanySettings in the route.
             fetch('/api/notify-signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyName, ownerName: name, email, phone }),
+                body: JSON.stringify({ companyName, ownerName: name, email, phone, companyId: company.id }),
             }).catch(() => {
                 // Best-effort — the account is already created either way.
             })
