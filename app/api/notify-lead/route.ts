@@ -70,24 +70,26 @@ export async function POST(request: Request) {
             .eq('company_id', lead.company_id)
             .maybeSingle()
 
+        // A company_settings row is only created the first time someone saves
+        // Admin → Settings, so plenty of companies have none at all. Always read
+        // the companies row too, or the greeting falls back to a generic "there"
+        // for exactly those companies.
+        const { data: company } = await supabase
+            .from('companies')
+            .select('company_name, owner_user_id')
+            .eq('id', lead.company_id)
+            .maybeSingle()
+
         // Prefer the address the company chose in Settings; otherwise fall back
         // to the email the account signed up with.
         let recipient = (companySettings?.lead_notification_email || '').trim()
 
-        if (!recipient) {
-            const { data: company } = await supabase
-                .from('companies')
-                .select('owner_user_id')
-                .eq('id', lead.company_id)
-                .maybeSingle()
-
-            if (company?.owner_user_id) {
-                const { data: owner, error: ownerError } = await supabase.auth.admin.getUserById(
-                    company.owner_user_id,
-                )
-                if (ownerError) console.error('notify-lead: failed to load owner:', ownerError.message)
-                recipient = owner?.user?.email ?? ''
-            }
+        if (!recipient && company?.owner_user_id) {
+            const { data: owner, error: ownerError } = await supabase.auth.admin.getUserById(
+                company.owner_user_id,
+            )
+            if (ownerError) console.error('notify-lead: failed to load owner:', ownerError.message)
+            recipient = owner?.user?.email ?? ''
         }
 
         if (!recipient) {
@@ -98,7 +100,7 @@ export async function POST(request: Request) {
         }
 
         const { error: sendError } = await sendLeadEmail(recipient, settings, {
-            company_name: companySettings?.company_name || 'there',
+            company_name: companySettings?.company_name || company?.company_name || 'there',
             lead_name: lead.name || 'Not given',
             lead_email: lead.email || 'Not given',
             lead_phone: lead.phone || 'Not given',
