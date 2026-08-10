@@ -5,10 +5,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabaseBrowser } from '@/lib/supabase'
 
-// The account whose boilers get copied into every new company on signup,
-// so new users land with a working catalogue instead of an empty one.
-const TEMPLATE_COMPANY_ID = '6578dad8-9e8a-4189-abf7-d578bda4af47'
-
 export default function SignupPage() {
     const [companyName, setCompanyName] = useState('')
     const [name, setName] = useState('')
@@ -56,114 +52,35 @@ export default function SignupPage() {
             return
         }
 
-        // Everything below runs as the signed-in user against RLS-protected
-        // tables, so it needs the session signUp() returns. That session is
-        // null whenever email confirmation is switched on for the project, and
-        // every insert then fails as `anon`. Fail here, with the actual cause,
-        // rather than letting it surface as "violates row-level security".
-        if (data.user && !data.session) {
-            console.error(
-                'Signup: no session returned from signUp(). Email confirmation is enabled ' +
-                'for this Supabase project; company creation cannot run client-side.'
-            )
-            alert(
-                'Your account was created but we could not finish setting up your company. ' +
-                'Please contact support@relode.io and we will sort it out right away.'
-            )
-            setLoading(false)
-            return
-        }
-
         if (data.user) {
-            const trialEndDate = new Date()
-            trialEndDate.setDate(trialEndDate.getDate() + 14)
+            // Company creation, pricing and boilers are all seeded server-side
+            // on the service-role client. They used to run here against the
+            // browser client, which only works while signUp() returns a session
+            // — i.e. only while email confirmation is off. With it on there is
+            // no session, every insert ran as `anon`, and signup failed on
+            // "new row violates row-level security policy". Doing it in a route
+            // makes the flow work either way.
+            let completeResult: { companyId?: string; error?: string } = {}
 
-            // These two columns say nothing about entitlement any more. What
-            // grants the dashboard is a Stripe subscription: stripe_subscription_id
-            // is null until a card has been taken, and AdminLayout gates on
-            // that. They're written only to keep new rows shaped like the
-            // existing ones; treat the row as "signed up, no card yet".
-            //
-            // This insert needs a session — the RLS insert policy on
-            // `companies` is scoped to the `authenticated` role. Supabase only
-            // returns a session from signUp() when email confirmation is off.
-            // With it on, this runs as `anon` and fails with "new row violates
-            // row-level security policy", which is what broke signup between
-            // late July and 10 Aug 2026.
-            const { data: company, error: companyError } = await supabaseBrowser
-                .from('companies')
-                .insert({
-                    company_name: companyName,
-                    owner_user_id: data.user.id,
-                    subscription_status: 'trial',
-                    trial_ends_at: trialEndDate.toISOString(),
+            try {
+                const response = await fetch('/api/signup/complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: data.user.id }),
                 })
-                .select()
-                .single()
+                completeResult = await response.json()
+            } catch {
+                completeResult = { error: 'Network error' }
+            }
 
-            if (companyError || !company) {
-                alert(`Company creation failed: ${companyError?.message || 'Unknown error'}`)
+            if (!completeResult.companyId) {
+                alert(
+                    `Your account was created but we could not finish setting up your company ` +
+                    `(${completeResult.error || 'unknown error'}). Please contact support@relode.io ` +
+                    `and we will sort it out right away.`
+                )
                 setLoading(false)
                 return
-            }
-
-            const { data: defaultPricing, error: pricingReadError } = await supabaseBrowser
-                .from('pricing')
-                .select('name, value, key, category')
-                .is('company_id', null)
-
-            if (pricingReadError) {
-                alert(`Failed to load default pricing: ${pricingReadError.message}`)
-                setLoading(false)
-                return
-            }
-
-            if (defaultPricing && defaultPricing.length > 0) {
-                const pricingRows = defaultPricing.map((row) => ({
-                    name: row.name,
-                    value: row.value,
-                    key: row.key,
-                    category: row.category,
-                    company_id: company.id,
-                }))
-
-                const { error: pricingInsertError } = await supabaseBrowser
-                    .from('pricing')
-                    .insert(pricingRows)
-
-                if (pricingInsertError) {
-                    alert(`Failed to create company pricing: ${pricingInsertError.message}`)
-                    setLoading(false)
-                    return
-                }
-            }
-
-            const { data: templateBoilers, error: boilersReadError } = await supabaseBrowser
-                .from('boilers')
-                .select('name, tier, category, output, price, warranty, status, image')
-                .eq('company_id', TEMPLATE_COMPANY_ID)
-
-            if (boilersReadError) {
-                alert(`Failed to load default boilers: ${boilersReadError.message}`)
-                setLoading(false)
-                return
-            }
-
-            if (templateBoilers && templateBoilers.length > 0) {
-                const boilerRows = templateBoilers.map((boiler) => ({
-                    ...boiler,
-                    company_id: company.id,
-                }))
-
-                const { error: boilersInsertError } = await supabaseBrowser
-                    .from('boilers')
-                    .insert(boilerRows)
-
-                if (boilersInsertError) {
-                    alert(`Failed to create default boilers: ${boilersInsertError.message}`)
-                    setLoading(false)
-                    return
-                }
             }
 
             // Also seeds the company_settings row server-side, which is why
@@ -171,13 +88,20 @@ export default function SignupPage() {
             fetch('/api/notify-signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ companyName, ownerName: name, email, phone, companyId: company.id }),
+                body: JSON.stringify({ companyName, ownerName: name, email, phone, companyId: completeResult.companyId }),
             }).catch(() => {
                 // Best-effort — the account is already created either way.
             })
         }
 
-        alert('Account created successfully. Sign in to pick a plan and start your 14-day free trial.')
+        // signUp() returns a session only when email confirmation is off. When
+        // it's on there's a verification email to action first, so say so
+        // rather than sending them to a sign-in that will reject them.
+        alert(
+            data.session
+                ? 'Account created successfully. Sign in to pick a plan and start your 14-day free trial.'
+                : 'Account created successfully. Check your email to verify your address, then sign in to pick a plan and start your 14-day free trial.'
+        )
 
         router.push('/')
         setLoading(false)
