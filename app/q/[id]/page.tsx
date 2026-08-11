@@ -20,17 +20,22 @@ export default async function CustomerQuotePage({ params }: Props) {
 
     if (!record) notFound()
 
-    // Fire-and-forget view tracking
-    supabase
-        .from('surveyor_quotes')
-        .update({
-            last_viewed_at: new Date().toISOString(),
-            view_count: (record.view_count ?? 0) + 1,
-        })
-        .eq('id', id)
-        .then(({ error }) => {
-            if (error) console.error('View tracking failed:', error)
-        })
+    // Fire-and-forget view tracking. Skipped while the quote is still a DRAFT:
+    // the only person who can be looking at it then is the surveyor previewing
+    // their own work, and counting that would show "VIEWED" in the admin list
+    // for a quote the customer has never been sent.
+    if (record.status !== 'DRAFT') {
+        supabase
+            .from('surveyor_quotes')
+            .update({
+                last_viewed_at: new Date().toISOString(),
+                view_count: (record.view_count ?? 0) + 1,
+            })
+            .eq('id', id)
+            .then(({ error }) => {
+                if (error) console.error('View tracking failed:', error)
+            })
+    }
 
     const { data: rawSettings } = await supabase
         .from('company_settings')

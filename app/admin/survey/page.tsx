@@ -4,8 +4,14 @@ import SurveyWizard from '@/components/surveyor/survey/SurveyWizard'
 import { mapSupabaseBoiler } from '@/lib/surveyor/types'
 import type { Boiler, PricingItem } from '@/lib/surveyor/types'
 import { loadCategoryMargins } from '@/lib/surveyor/margins'
+import { loadSurveyLead } from '@/lib/surveyor/leadSync'
 
-export default async function SurveyPage() {
+export default async function SurveyPage({
+    searchParams,
+}: {
+    searchParams: Promise<{ lead_id?: string }>
+}) {
+    const { lead_id } = await searchParams
     const company = await getCurrentCompany()
     const supabase = createAdminClient()
 
@@ -40,6 +46,10 @@ export default async function SurveyPage() {
         active: r.active,
     }))
 
+    // Set when the survey was started from a lead card (?lead_id=…), so the
+    // resulting quote lands back on that lead rather than creating a duplicate.
+    const lead = await loadSurveyLead(supabase, company.id, lead_id)
+
     const hasPricing = pricingItems.length > 0
 
     return (
@@ -56,7 +66,7 @@ export default async function SurveyPage() {
                 </div>
             )}
             {hasPricing && (
-                <SurveyWizard boilers={boilers} pricingItems={pricingItems} companyId={company.id} vatRegistered={!!rawSettings?.vat_registered} margins={margins} />
+                <SurveyWizard boilers={boilers} pricingItems={pricingItems} companyId={company.id} vatRegistered={!!rawSettings?.vat_registered} margins={margins} lead={lead} />
             )}
         </div>
     )

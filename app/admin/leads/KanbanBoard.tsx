@@ -6,6 +6,7 @@ import {
     ALL_STAGES,
     STALE_AFTER_DAYS,
     isLeadStale,
+    stageIndex,
 } from '@/lib/pipelineStages'
 import { updateLeadStage } from './actions'
 import DisqualifyModal from './DisqualifyModal'
@@ -92,6 +93,12 @@ export default function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
                             <div className="flex flex-col gap-3 min-h-[60px]">
                                 {stageLeads.map((lead) => {
                                     const stale = isLeadStale(lead)
+                                    // Surveying is only still ahead of a lead up to the point
+                                    // it's been quoted and accepted — past that, offering to
+                                    // start one just invites an accidental re-quote.
+                                    const canSurvey =
+                                        stage.key !== 'Lost' &&
+                                        stageIndex(lead.pipeline_stage) < stageIndex('Quote Accepted')
 
                                     return (
                                         <div
@@ -161,6 +168,15 @@ export default function KanbanBoard({ leads }: { leads: KanbanLead[] }) {
                                                     >
                                                         ✉️
                                                     </a>
+                                                )}
+                                                {canSurvey && (
+                                                    <Link
+                                                        href={`/admin/survey?lead_id=${lead.id}`}
+                                                        title="Start a survey quote attached to this lead"
+                                                        className="ml-auto rounded-lg bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                                    >
+                                                        Start survey
+                                                    </Link>
                                                 )}
                                             </div>
 

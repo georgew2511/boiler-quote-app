@@ -1,26 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { normalizeQuoteResult } from '@/lib/surveyor/types'
-import { Resend } from 'resend'
 import { getAuthedCompanyId } from '@/lib/authedCompany'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
-
-const DEFAULT_TEMPLATE = `Hi {customer_name},
-
-Thank you for receiving your boiler installation quote from {company_name}!
-
-You have been sent {option_count} to review at your convenience. Simply click your preferred option to accept.
-
-If you have any questions, please don't hesitate to contact us:
-📞 {phone}
-✉ {email}
-
-Thank you for considering {company_name}.`
+import { syncLeadForQuote } from '@/lib/surveyor/leadSync'
+import { sendQuoteEmail } from '@/lib/surveyor/quoteEmail'
 
 export async function POST(req: NextRequest) {
     try {
-        const { survey, quoteResult, companyId, surveyorId, surveyorName } = await req.json()
+        const { survey, quoteResult, companyId, surveyorId, surveyorName, leadId, send } = await req.json()
+
+        // Saving and emailing are separate acts. Previewing a quote saves it so
+        // the surveyor can open /q/<id>, but the customer must not hear about it
+        // until the surveyor presses "Email to customer" — opt in explicitly.
+        const shouldSend = send === true
 
         const supabase = createAdminClient()
 
@@ -41,19 +33,6 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Fetch company details for the email
-        const { data: company } = await supabase
-            .from('companies')
-            .select('company_name')
-            .eq('id', companyId)
-            .single()
-
-        const { data: settings } = await supabase
-            .from('company_settings')
-            .select('company_name, phone_number, email_address, from_email, reply_to_email')
-            .eq('company_id', companyId)
-            .maybeSingle()
-
         const totals: number[] = quoteResult.options.map((o: { total: number }) => o.total)
 
         const { data: quote, error } = await supabase
@@ -72,8 +51,8 @@ export async function POST(req: NextRequest) {
                 low_total: Math.min(...totals),
                 high_total: Math.max(...totals),
                 mid_total: totals[Math.floor((totals.length - 1) / 2)],
-                status: 'SENT',
-                email_sent_at: new Date().toISOString(),
+                status: shouldSend ? 'SENT' : 'DRAFT',
+                email_sent_at: shouldSend ? new Date().toISOString() : null,
                 notes: survey.specialNotes ?? '',
                 surveyor_id: surveyorId ?? null,
                 surveyor_name: surveyorName ?? null,
@@ -87,60 +66,45 @@ export async function POST(req: NextRequest) {
         }
 
         const quoteId = quote.id
-        const quoteRef = quoteId.slice(-8).toUpperCase()
-        const companyName = settings?.company_name ?? company?.company_name ?? 'Your Company'
-        const companyPhone = settings?.phone_number ?? ''
-        const companyEmail = settings?.email_address ?? ''
-        const fromEmail = settings?.from_email ?? process.env.RESEND_FROM_EMAIL ?? 'noreply@relode.io'
-        const replyTo = (settings?.reply_to_email ?? companyEmail) || undefined
 
-        const quoteUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://portal.relode.io'}/q/${quoteId}`
-
-        const optionCount = quoteResult.options.length
-        const optionCountLabel = optionCount === 1 ? 'a boiler option' : `${optionCount} boiler options`
-
-        const emailBody = DEFAULT_TEMPLATE
-            .replace(/\{customer_name\}/g, survey.customerName)
-            .replace(/\{company_name\}/g, companyName)
-            .replace(/\{phone\}/g, companyPhone)
-            .replace(/\{email\}/g, companyEmail)
-            .replace(/\{option_count\}/g, optionCountLabel)
-
-        const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"></head>
-<body style="margin:0;padding:32px 16px;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.08);margin:0 auto;">
-    <tr><td style="background:#1d4ed8;padding:28px 36px;">
-      <h1 style="color:#fff;margin:0;font-size:20px;">Your Boiler Quote — ${companyName}</h1>
-      <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px;">Ref: ${quoteRef}</p>
-    </td></tr>
-    <tr><td style="padding:32px 36px;">
-      <div style="font-size:15px;color:#374151;line-height:1.7;white-space:pre-line;">${emailBody}</div>
-      <div style="margin-top:28px;text-align:center;">
-        <a href="${quoteUrl}" style="display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:14px 32px;border-radius:10px;font-weight:700;font-size:15px;">
-          View &amp; Accept Your Quote →
-        </a>
-      </div>
-    </td></tr>
-    <tr><td style="padding:16px 36px 28px;border-top:1px solid #e5e7eb;text-align:center;">
-      <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">${companyName}</p>
-      ${companyPhone ? `<p style="margin:0 0 4px;font-size:13px;color:#6b7280;">${companyPhone}</p>` : ''}
-      ${companyEmail ? `<p style="margin:0;font-size:13px;color:#6b7280;">${companyEmail}</p>` : ''}
-    </td></tr>
-  </table>
-</body></html>`
-
+        // Push the CRM forward: the survey has been done and priced, so the lead
+        // belongs in "Survey Complete" — true whether or not the surveyor has
+        // emailed it yet. Best-effort by design: the quote is already saved, and
+        // a pipeline hiccup must never cost the surveyor the work they just did
+        // on a doorstep.
         try {
-            await resend.emails.send({
-                from: fromEmail,
-                to: survey.customerEmail,
-                replyTo: replyTo,
-                subject: `Your boiler installation quote — ${companyName}`,
-                html,
+            await syncLeadForQuote(supabase, {
+                companyId,
+                quoteId,
+                leadId: Number.isInteger(leadId) ? leadId : null,
+                identity: {
+                    name: survey.customerName,
+                    email: survey.customerEmail,
+                    phone: survey.customerPhone,
+                    postcode: survey.postcode,
+                },
+                targetStage: 'Survey Complete',
+                // Highest option quoted, so the card carries a value even
+                // before the customer picks one.
+                extra: { quote_price: Math.max(...totals) },
             })
-        } catch (emailError) {
-            console.error('Email send failed:', emailError)
-            // Don't fail the whole request — quote was saved
+        } catch (leadError) {
+            console.error('Lead pipeline sync failed for quote', quoteId, leadError)
+        }
+
+        if (shouldSend) {
+            try {
+                await sendQuoteEmail(supabase, {
+                    quoteId,
+                    companyId,
+                    customerName: survey.customerName,
+                    customerEmail: survey.customerEmail,
+                    optionCount: quoteResult.options.length,
+                })
+            } catch (emailError) {
+                console.error('Email send failed:', emailError)
+                // Don't fail the whole request — quote was saved
+            }
         }
 
         return NextResponse.json({ id: quoteId })

@@ -50,6 +50,30 @@ export function getStageDefinition(stageKey: string | null | undefined): Pipelin
     return ALL_STAGES.find((s) => s.key === stageKey) || PIPELINE_STAGES[0]
 }
 
+// Position within the active pipeline. -1 for anything not in it — blank
+// stages on legacy rows, interim statuses like "Survey Requested", and "Lost".
+export function stageIndex(stageKey: string | null | undefined): number {
+    return PIPELINE_STAGES.findIndex((s) => s.key === stageKey)
+}
+
+// Guard for automated stage moves (a surveyor quote landing, a customer
+// accepting online). Automation may only push a lead *forward*: re-quoting a
+// job that's already installed must not drag it back to "Survey Complete",
+// and "Lost" is a deliberate human decision that nothing should silently undo.
+// A stage we don't recognise counts as index -1, i.e. the very start, so those
+// leads still get picked up by the first automated move.
+export function shouldAdvanceStage(
+    currentStage: string | null | undefined,
+    targetStage: string
+): boolean {
+    if (currentStage === LOST_STAGE.key) return false
+
+    const target = stageIndex(targetStage)
+    if (target === -1) return false
+
+    return target > stageIndex(currentStage)
+}
+
 // A lead is "stale" if it's been sitting in an active (non-terminal) stage
 // without an update for this many days — the single biggest failure mode
 // for sole traders running their own pipeline is forgetting to chase up.

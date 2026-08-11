@@ -11,6 +11,9 @@ interface Props {
   companyId: string;
   surveyorId?: string;
   surveyorName?: string;
+  // CRM lead this survey was launched from, if any — sent with the quote so the
+  // server can advance that lead rather than guess at a match.
+  leadId?: number | null;
   vatRate?: number;
   onBack: () => void;
 }
@@ -38,7 +41,7 @@ function makeRecalc(vatRate: number) {
   };
 }
 
-export default function StepReview({ survey, quoteResult, updateQuote, boilers, companyId, surveyorId, surveyorName, vatRate = 0.20, onBack }: Props) {
+export default function StepReview({ survey, quoteResult, updateQuote, boilers, companyId, surveyorId, surveyorName, leadId = null, vatRate = 0.20, onBack }: Props) {
   const recalcTotals = makeRecalc(vatRate);
   const options = quoteResult.options;
   // Default to a middle option so a 3-boiler quote still opens on "Better" as before.
@@ -94,22 +97,27 @@ export default function StepReview({ survey, quoteResult, updateQuote, boilers, 
     setEditLocked(true);
   }
 
-  async function saveQuote(): Promise<string> {
+  // `send` decides whether the customer is emailed as part of saving. Preview
+  // passes false so the surveyor can check the quote over first — see below.
+  async function saveQuote(send: boolean): Promise<string> {
     const res = await fetch("/api/surveyor/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ survey, quoteResult, companyId, surveyorId, surveyorName }),
+      body: JSON.stringify({ survey, quoteResult, companyId, surveyorId, surveyorName, leadId, send }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error ?? "Failed to save quote");
     return data.id;
   }
 
+  // Previewing has to save the quote — /q/<id> reads it back from the database —
+  // but it saves a DRAFT and emails nobody. The customer only ever hears from us
+  // via "Email to customer".
   async function previewQuote() {
     setPreviewing(true);
     setError(null);
     try {
-      const id = quoteId ?? await saveQuote();
+      const id = quoteId ?? await saveQuote(false);
       setQuoteId(id);
       window.open(`/q/${id}`, "_blank");
     } catch (e) {
@@ -123,9 +131,20 @@ export default function StepReview({ survey, quoteResult, updateQuote, boilers, 
     setSending(true);
     setError(null);
     try {
-      // saveQuote POSTs to /api/surveyor/quotes which also sends the email
-      const id = quoteId ?? await saveQuote();
-      setQuoteId(id);
+      if (quoteId) {
+        // Already saved by a preview. Post the current quoteResult along with
+        // the send so any edits made after previewing are what the customer
+        // actually receives.
+        const res = await fetch(`/api/surveyor/quotes/${quoteId}/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quoteResult }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to send quote");
+      } else {
+        setQuoteId(await saveQuote(true));
+      }
       setSent(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { Resend } from 'resend'
+import { advanceLeadStage, resolveLeadForQuote } from '@/lib/surveyor/leadSync'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -47,6 +48,34 @@ export async function POST(
             status: 'ACCEPTED',
         })
         .eq('id', id)
+
+    // Move the lead to "Quote Accepted" and record what they actually chose, so
+    // the pipeline reflects the win without anyone touching the board. Falls
+    // back to matching on the customer's details when the quote predates the
+    // lead_id column or was raised without a lead behind it. Best-effort: the
+    // customer's acceptance must be recorded even if the CRM update fails.
+    try {
+        const lead = await resolveLeadForQuote(
+            supabase,
+            quote.company_id,
+            quote.lead_id ?? null,
+            {
+                name: quote.customer_name,
+                email: quote.customer_email,
+                phone: quote.customer_phone,
+                postcode: quote.postcode,
+            }
+        )
+
+        if (lead) {
+            await advanceLeadStage(supabase, quote.company_id, lead, 'Quote Accepted', {
+                boiler_name: boilerName,
+                quote_price: Number(total) || 0,
+            })
+        }
+    } catch (leadError) {
+        console.error('Lead pipeline sync failed on accept for quote', id, leadError)
+    }
 
     const { data: settings } = await supabase
         .from('company_settings')

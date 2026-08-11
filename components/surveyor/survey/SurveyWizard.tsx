@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Boiler, PricingItem, SurveyData, QuoteResult } from "@/lib/surveyor/types";
 import type { MarginMap } from "@/lib/surveyor/margins";
+import type { SurveyLeadPrefill } from "@/lib/surveyor/leadSync";
 import { buildQuoteResult } from "@/lib/surveyor/pricing";
 import StepCustomer from "./StepCustomer";
 import StepJobType from "./StepJobType";
@@ -29,6 +30,9 @@ interface Props {
   companyName?: string;
   logoUrl?: string | null;
   primaryColour?: string;
+  // The CRM lead this survey was launched from, when there is one. Prefills the
+  // customer step and ties the resulting quote back to that lead's card.
+  lead?: SurveyLeadPrefill | null;
 }
 
 const STEP_LABELS = [
@@ -116,9 +120,19 @@ const DEFAULT_SURVEY: Partial<SurveyData> = {
 // Steps that are only relevant for system/regular boilers — skip for combi
 const COMBI_SKIP_STEPS = new Set([4, 5]); // Cylinder, System Components
 
-export default function SurveyWizard({ boilers, pricingItems, companyId, surveyorId, surveyorName, vatRegistered = true, margins = {}, companyName, logoUrl, primaryColour }: Props) {
+export default function SurveyWizard({ boilers, pricingItems, companyId, surveyorId, surveyorName, vatRegistered = true, margins = {}, companyName, logoUrl, primaryColour, lead = null }: Props) {
   const [step, setStep] = useState(0);
-  const [survey, setSurvey] = useState<Partial<SurveyData>>(DEFAULT_SURVEY);
+  const [survey, setSurvey] = useState<Partial<SurveyData>>(() =>
+    lead
+      ? {
+          ...DEFAULT_SURVEY,
+          customerName: lead.customerName,
+          customerEmail: lead.customerEmail,
+          customerPhone: lead.customerPhone,
+          postcode: lead.postcode,
+        }
+      : DEFAULT_SURVEY
+  );
   const [quoteResult, setQuoteResult] = useState<QuoteResult | null>(null);
 
   const pricingMap = Object.fromEntries(pricingItems.map((p) => [p.key, p]));
@@ -172,6 +186,14 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, surveyo
             ) : null}
             {surveyorName && (
               <span className="text-sm text-slate-400">· {surveyorName}</span>
+            )}
+            {lead && (
+              <span
+                title="This quote will be attached to the customer's existing lead"
+                className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700"
+              >
+                Linked to {lead.customerName || `lead #${lead.leadId}`}
+              </span>
             )}
           </div>
           <span className="text-sm text-slate-400">
@@ -239,6 +261,7 @@ export default function SurveyWizard({ boilers, pricingItems, companyId, surveyo
             companyId={companyId}
             surveyorId={surveyorId}
             surveyorName={surveyorName}
+            leadId={lead?.leadId ?? null}
             vatRate={vatRegistered ? 0.20 : 0}
             onBack={back}
           />

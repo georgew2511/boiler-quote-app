@@ -2,10 +2,18 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/utils/supabase/admin'
 import SurveyWizard from '@/components/surveyor/survey/SurveyWizard'
 import { mapSupabaseBoiler } from '@/lib/surveyor/types'
+import { loadSurveyLead } from '@/lib/surveyor/leadSync'
 import type { Boiler, PricingItem } from '@/lib/surveyor/types'
 
-export default async function PublicSurveyPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function PublicSurveyPage({
+    params,
+    searchParams,
+}: {
+    params: Promise<{ token: string }>
+    searchParams: Promise<{ lead_id?: string }>
+}) {
     const { token } = await params
+    const { lead_id } = await searchParams
     const supabase = createAdminClient()
 
     // Resolve surveyor from token
@@ -61,6 +69,11 @@ export default async function PublicSurveyPage({ params }: { params: Promise<{ t
         )
     }
 
+    // Optional CRM lead the survey was launched against (?lead_id=…). Scoped to
+    // the surveyor's own company so a guessed id can't leak another company's
+    // customer details onto this unauthenticated page.
+    const lead = await loadSurveyLead(supabase, companyId, lead_id)
+
     const companyName = rawSettings?.company_name ?? 'Your Company'
     const logoUrl = rawSettings?.logo_url ?? null
     const primaryColour = rawSettings?.primary_colour ?? '#1d4ed8'
@@ -72,6 +85,7 @@ export default async function PublicSurveyPage({ params }: { params: Promise<{ t
             companyId={companyId}
             surveyorId={surveyor.id}
             surveyorName={surveyor.name}
+            lead={lead}
             vatRegistered={!!rawSettings?.vat_registered}
             companyName={companyName}
             logoUrl={logoUrl}
