@@ -18,7 +18,7 @@ export default async function SurveyPage({
     const [{ data: rawBoilers }, { data: rawPricing }, { data: rawSettings }] = await Promise.all([
         supabase
             .from('boilers')
-            .select('id, name, manufacturer, output, tier, category, price, warranty, image, status')
+            .select('id, name, manufacturer, output, tier, category, price, markup_percent, warranty, image, status')
             .eq('company_id', company.id)
             .eq('status', 'Active'),
         supabase

@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { parseMarkupOverride } from '@/lib/boilerMarkup'
 
 export default function NewBoilerPage() {
     async function createBoiler(formData: FormData) {
@@ -42,6 +43,7 @@ export default function NewBoilerPage() {
                 tier: formData.get('tier'),
                 category: formData.get('category'),
                 price: Number(formData.get('price')),
+                markup_percent: parseMarkupOverride(formData.get('markup_percent')),
                 output: Number(formData.get('output')),
                 image: imageUrl,
                 warranty: Number(formData.get('warranty')),
@@ -135,13 +137,30 @@ export default function NewBoilerPage() {
                         </div>
 
                         <div>
-                            <label className="mb-2 block font-medium">Price (£)</label>
+                            <label className="mb-2 block font-medium">Trade Price (£)</label>
                             <input
                                 name="price"
                                 type="number"
+                                step="any"
                                 required
                                 className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             />
+                            <p className="mt-2 text-sm text-gray-500">What you pay your supplier, ex VAT.</p>
+                        </div>
+
+                        <div>
+                            <label className="mb-2 block font-medium">Markup Override (%)</label>
+                            <input
+                                name="markup_percent"
+                                type="number"
+                                step="any"
+                                min="0"
+                                placeholder="Blank = company default"
+                                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            />
+                            <p className="mt-2 text-sm text-gray-500">
+                                Leave blank to use your company-wide boiler markup from Pricing.
+                            </p>
                         </div>
 
                         <div>

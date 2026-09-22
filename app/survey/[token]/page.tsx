@@ -3,6 +3,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import SurveyWizard from '@/components/surveyor/survey/SurveyWizard'
 import { mapSupabaseBoiler } from '@/lib/surveyor/types'
 import { loadSurveyLead } from '@/lib/surveyor/leadSync'
+import { loadCategoryMargins } from '@/lib/surveyor/margins'
 import type { Boiler, PricingItem } from '@/lib/surveyor/types'
 
 export default async function PublicSurveyPage({
@@ -30,7 +31,7 @@ export default async function PublicSurveyPage({
     const [{ data: rawBoilers }, { data: rawPricing }, { data: rawSettings }] = await Promise.all([
         supabase
             .from('boilers')
-            .select('id, name, manufacturer, output, tier, category, price, warranty, image, status')
+            .select('id, name, manufacturer, output, tier, category, price, markup_percent, warranty, image, status')
             .eq('company_id', companyId)
             .eq('status', 'Active'),
         supabase
@@ -74,6 +75,10 @@ export default async function PublicSurveyPage({
     // customer details onto this unauthenticated page.
     const lead = await loadSurveyLead(supabase, companyId, lead_id)
 
+    // Same margins the in-app survey applies, so a quote built from the
+    // surveyor's link is priced identically to one built in the admin panel.
+    const margins = await loadCategoryMargins(supabase, companyId)
+
     const companyName = rawSettings?.company_name ?? 'Your Company'
     const logoUrl = rawSettings?.logo_url ?? null
     const primaryColour = rawSettings?.primary_colour ?? '#1d4ed8'
@@ -83,6 +88,7 @@ export default async function PublicSurveyPage({
             boilers={boilers}
             pricingItems={pricingItems}
             companyId={companyId}
+            margins={margins}
             surveyorId={surveyor.id}
             surveyorName={surveyor.name}
             lead={lead}

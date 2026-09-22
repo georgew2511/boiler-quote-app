@@ -174,6 +174,8 @@ export interface Boiler {
   tier: BoilerTier;
   boilerType: string; // COMBI | SYSTEM | REGULAR
   tradePrice: number;
+  /** Per-boiler markup override; null means use the company BOILER margin. */
+  markupPercent: number | null;
   warrantyYears: number;
   description: string | null;
   imageSlug: string | null;
@@ -235,6 +237,7 @@ export function mapSupabaseBoiler(row: {
   tier: string;
   category: string;
   price: number;
+  markup_percent?: number | string | null;
   warranty: number;
   image: string | null;
   status: string;
@@ -258,6 +261,8 @@ export function mapSupabaseBoiler(row: {
     tier: tierMap[row.tier] ?? "LOW",
     boilerType: typeMap[row.category] ?? "COMBI",
     tradePrice: row.price,
+    markupPercent:
+      row.markup_percent === null || row.markup_percent === undefined ? null : Number(row.markup_percent),
     warrantyYears: row.warranty,
     description: null,
     imageSlug: row.image,

@@ -1,15 +1,18 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
+import { loadDefaultBoilerMarkup, parseMarkupOverride, saveDefaultBoilerMarkup } from '@/lib/boilerMarkup'
+import BoilerPricesEditor from './BoilerPricesEditor'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { PRICING_CATEGORY_LABELS, PricingCategory } from '@/lib/pricingKeys'
 
 export default async function PricingPage({
     searchParams,
 }: {
-    searchParams: Promise<{ tab?: string }>
+    searchParams: Promise<{ tab?: string; imported?: string }>
 }) {
-    const { tab } = await searchParams
+    const { tab, imported } = await searchParams
     const activeTab = tab === 'surcharges' ? 'surcharges' : 'boilers'
 
     const company = await getCurrentCompany()
@@ -36,6 +39,9 @@ export default async function PricingPage({
         .eq('company_id', company.id)
         .order('id')
 
+    const defaultMarkup = await loadDefaultBoilerMarkup(createAdminClient(), company.id)
+    const calculatorAppliesMarkup = !!company.calculator_applies_boiler_markup
+
     if (boilersError) console.error(boilersError)
     if (pricingError) console.error(pricingError)
 
@@ -44,17 +50,34 @@ export default async function PricingPage({
         const supabase = await createClient()
         const company = await getCurrentCompany()
 
+        await saveDefaultBoilerMarkup(createAdminClient(), company.id, Number(formData.get('default_markup')))
+
         const boilerIds = formData.getAll('boiler_id')
 
-        for (const id of boilerIds) {
-            const value = formData.get(`price_${id}`)
-            await supabase
-                .from('boilers')
-                .update({ price: Number(value) })
-                .eq('id', id)
-                .eq('company_id', company.id)
-        }
+        await Promise.all(
+            boilerIds.map((id) =>
+                supabase
+                    .from('boilers')
+                    .update({
+                        price: Number(formData.get(`price_${id}`)),
+                        markup_percent: parseMarkupOverride(formData.get(`markup_${id}`)),
+                    })
+                    .eq('id', id)
+                    .eq('company_id', company.id)
+            )
+        )
 
+        redirect('/admin/pricing?tab=boilers')
+    }
+
+    async function setCalculatorMarkup(formData: FormData) {
+        'use server'
+        const company = await getCurrentCompany()
+        const { error } = await createAdminClient()
+            .from('companies')
+            .update({ calculator_applies_boiler_markup: formData.get('enabled') === 'true' })
+            .eq('id', company.id)
+        if (error) console.error('Failed to update calculator_applies_boiler_markup:', error.message)
         redirect('/admin/pricing?tab=boilers')
     }
 
@@ -144,66 +167,85 @@ export default async function PricingPage({
                 </div>
 
                 {activeTab === 'boilers' && (
-                    <form action={saveBoilerPrices} className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                        <div className="mb-4 flex items-center justify-between">
-                            <p className="text-sm text-gray-500">
-                                Quickly adjust base prices across every boiler. Need to change a name, image or tier instead?{' '}
-                                <Link href="/admin/boilers" className="text-blue-600 hover:underline">
-                                    Open the boiler catalogue
-                                </Link>
-                                .
-                            </p>
-                            <button className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md">
-                                Save Changes
-                            </button>
-                        </div>
+                    <>
+                        {imported && (
+                            <div className="mt-6 rounded-2xl bg-emerald-50 px-5 py-3 text-sm text-emerald-800">
+                                Updated {imported} boiler {imported === '1' ? 'price' : 'prices'} from your supplier quote.
+                            </div>
+                        )}
 
-                        <table className="w-full overflow-hidden rounded-2xl">
-                            <thead>
-                                <tr className="border-b border-slate-200">
-                                    <th className="pb-4 text-left">Boiler</th>
-                                    <th className="pb-4 text-left">Category</th>
-                                    <th className="pb-4 text-left">Output</th>
-                                    <th className="pb-4 text-left">Price (£)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {(!boilers || boilers.length === 0) && (
-                                    <tr>
-                                        <td colSpan={4} className="py-8 text-center text-red-600">
-                                            No boilers found. Add one from the boiler catalogue first.
-                                        </td>
-                                    </tr>
-                                )}
-                                {boilers?.map((boiler: any) => (
-                                    <tr key={boiler.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50 last:border-0">
-                                        <td className="py-4 font-medium">{boiler.name}</td>
-                                        <td className="py-4 capitalize text-slate-500">{boiler.category}</td>
-                                        <td className="py-4 text-slate-500">{boiler.output}kW</td>
-                                        <td className="py-4">
-                                            <input type="hidden" name="boiler_id" value={boiler.id} />
-                                            <input
-                                                type="number"
-                                                step="any"
-                                                defaultValue={boiler.price}
-                                                name={`price_${boiler.id}`}
-                                                className="w-40 rounded-2xl border border-slate-300 bg-white px-3 py-2 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        {calculatorAppliesMarkup ? (
+                            <form action={setCalculatorMarkup} className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-100 px-5 py-3 text-sm text-slate-700">
+                                <input type="hidden" name="enabled" value="false" />
+                                <span>
+                                    Boiler prices below are <strong>trade prices</strong>. Customers see them with your markup
+                                    added, on the online quote calculator and on surveyor quotes.
+                                </span>
+                                <button className="text-slate-500 underline hover:text-slate-700">
+                                    Stop adding markup on the calculator
+                                </button>
+                            </form>
+                        ) : (
+                            <form action={setCalculatorMarkup} className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+                                <input type="hidden" name="enabled" value="true" />
+                                <p className="font-semibold">Your online calculator isn&apos;t adding boiler markup yet</p>
+                                <p className="mt-1">
+                                    Surveyor quotes already treat these prices as trade prices and add your markup, but the online
+                                    quote calculator still shows them to customers exactly as entered. If the prices below are what
+                                    you pay your supplier, turn markup on so online quotes match. If you&apos;ve entered selling
+                                    prices, change them to trade prices first.
+                                </p>
+                                <button className="mt-3 rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white hover:bg-amber-700">
+                                    These are trade prices: add markup on the calculator
+                                </button>
+                            </form>
+                        )}
 
-                        <div className="mt-6">
-                            <button
-                                type="submit"
-                                className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md"
-                            >
-                                Save Changes
-                            </button>
-                        </div>
-                    </form>
+                        <form action={saveBoilerPrices} className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between gap-4">
+                                <p className="text-sm text-gray-500">
+                                    Enter trade prices ex VAT. Need to change a name, image or tier instead?{' '}
+                                    <Link href="/admin/boilers" className="text-blue-600 hover:underline">
+                                        Open the boiler catalogue
+                                    </Link>
+                                    .
+                                </p>
+                                <div className="flex shrink-0 items-center gap-3">
+                                    <Link
+                                        href="/admin/pricing/import"
+                                        className="rounded-xl border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
+                                    >
+                                        Import supplier quote
+                                    </Link>
+                                    <button className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md">
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </div>
+
+                            <BoilerPricesEditor
+                                boilers={(boilers ?? []).map((b: any) => ({
+                                    id: b.id,
+                                    name: b.name,
+                                    category: b.category,
+                                    output: b.output,
+                                    price: Number(b.price) || 0,
+                                    markup_percent: b.markup_percent === null ? null : Number(b.markup_percent),
+                                }))}
+                                defaultMarkup={defaultMarkup}
+                                vatRegistered={vatRegistered}
+                            />
+
+                            <div className="mt-6">
+                                <button
+                                    type="submit"
+                                    className="rounded-xl border border-emerald-700 bg-emerald-700 px-6 py-3 font-semibold text-white shadow-sm transition-all hover:bg-emerald-800 hover:shadow-md"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </>
                 )}
 
                 {activeTab === 'surcharges' && (

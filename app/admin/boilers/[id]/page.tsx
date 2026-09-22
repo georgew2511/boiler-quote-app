@@ -1,7 +1,9 @@
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { getCurrentCompany } from '@/lib/getcurrentcompany'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { applyBoilerMarkup, effectiveBoilerMarkup, loadDefaultBoilerMarkup, parseMarkupOverride } from '@/lib/boilerMarkup'
 
 export default async function EditBoilerPage({ params }: { params: Promise<{ id: string }> }) {
     const { id: routeId } = await params
@@ -41,6 +43,9 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
         )
     }
 
+    const defaultMarkup = await loadDefaultBoilerMarkup(createAdminClient(), company.id)
+    const markup = effectiveBoilerMarkup(boiler.markup_percent, defaultMarkup)
+
     async function updateBoiler(formData: FormData) {
         'use server'
         const supabase = await createClient()
@@ -53,6 +58,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                 updates[field] = value
             }
         }
+        updates.markup_percent = parseMarkupOverride(formData.get('markup_percent'))
         const imageFile = formData.get('image') as File
 
         if (imageFile && imageFile.size > 0) {
@@ -178,7 +184,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                         />
                     </div>
                     <div>
-                        <label className="mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-600" htmlFor="price">Price (£)</label>
+                        <label className="mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-600" htmlFor="price">Trade Price (£)</label>
                         <input
                             id="price"
                             name="price"
@@ -189,9 +195,30 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                             className="w-full rounded-2xl border border-gray-300 px-4 py-4 text-lg transition focus:border-green-500 focus:outline-none"
                         />
                         <p className="mt-2 text-sm text-gray-500">
-                            Updating prices for several boilers at once? Use{' '}
+                            What you pay your supplier, ex VAT. Updating prices for several boilers at once, or
+                            importing a supplier quote? Use{' '}
                             <Link href="/admin/pricing?tab=boilers" className="text-blue-600 hover:underline">
                                 Pricing → Boiler Prices
+                            </Link>
+                            .
+                        </p>
+                    </div>
+                    <div>
+                        <label className="mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-600" htmlFor="markup_percent">Markup Override (%)</label>
+                        <input
+                            id="markup_percent"
+                            name="markup_percent"
+                            type="number"
+                            step="any"
+                            min="0"
+                            defaultValue={boiler.markup_percent ?? ''}
+                            placeholder={`${defaultMarkup}% (company default)`}
+                            className="w-full rounded-2xl border border-gray-300 px-4 py-4 text-lg transition focus:border-green-500 focus:outline-none"
+                        />
+                        <p className="mt-2 text-sm text-gray-500">
+                            Leave blank to use your company-wide boiler markup ({defaultMarkup}%), set in{' '}
+                            <Link href="/admin/pricing?tab=boilers" className="text-blue-600 hover:underline">
+                                Pricing
                             </Link>
                             .
                         </p>
@@ -251,7 +278,7 @@ export default async function EditBoilerPage({ params }: { params: Promise<{ id:
                     <div className="rounded-2xl bg-green-50 p-6 md:col-span-2">
                         <h3 className="mb-2 text-lg font-bold text-green-800">Quick Summary</h3>
                         <p className="text-green-700">
-                            {boiler.name} • {boiler.output}kW • {boiler.category} • {boiler.tier} • £{Number(boiler.price || 0).toLocaleString()}
+                            {boiler.name} • {boiler.output}kW • {boiler.category} • {boiler.tier} • £{Number(boiler.price || 0).toLocaleString()} trade + {markup}% = £{applyBoilerMarkup(Number(boiler.price || 0), markup).toLocaleString()} ex VAT
                         </p>
                     </div>
 

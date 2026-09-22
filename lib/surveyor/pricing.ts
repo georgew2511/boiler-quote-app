@@ -1,6 +1,7 @@
 import type { SurveyData, LineItem, QuoteOption, QuoteResult, Boiler, PricingItem } from "./types";
 import { MAX_QUOTE_OPTIONS, labelsForOptionCount } from "./types";
 import type { MarginMap } from "./margins";
+import { applyBoilerMarkup, effectiveBoilerMarkup } from "@/lib/boilerMarkup";
 
 const VAT_RATE = 0.20; // default; callers can override via vatRate param
 
@@ -158,6 +159,11 @@ export function computeLineItems(survey: SurveyData, pricing: Record<string, Pri
   return items;
 }
 
+/** Boiler trade price marked up by its own override, else the BOILER margin. */
+function boilerSellPrice(boiler: Boiler, margins: MarginMap): number {
+  return applyBoilerMarkup(boiler.tradePrice, effectiveBoilerMarkup(boiler.markupPercent, margins.BOILER ?? 0));
+}
+
 export function buildQuoteOption(
   label: string,
   boilerId: string,
@@ -167,7 +173,7 @@ export function buildQuoteOption(
   margins: MarginMap = {}
 ): QuoteOption {
   const boiler = boilers.find((b) => b.id === boilerId)!;
-  const boilerPrice = applyMargin(boiler.tradePrice, "BOILER", margins);
+  const boilerPrice = boilerSellPrice(boiler, margins);
   const boilerItem: LineItem = {
     key: `boiler_${boilerId}`,
     name: `${boiler.name} — ${boiler.warrantyYears}-year warranty`,
@@ -215,8 +221,8 @@ export function buildQuoteResult(
     .filter((id) => boilers.some((b) => b.id === id))
     .slice(0, MAX_QUOTE_OPTIONS)
     .sort((a, b) => {
-      const pa = boilers.find((x) => x.id === a)!.tradePrice;
-      const pb = boilers.find((x) => x.id === b)!.tradePrice;
+      const pa = boilerSellPrice(boilers.find((x) => x.id === a)!, margins);
+      const pb = boilerSellPrice(boilers.find((x) => x.id === b)!, margins);
       return pa - pb;
     });
 

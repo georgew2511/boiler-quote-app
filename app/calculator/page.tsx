@@ -239,15 +239,18 @@ function CalculatorContent() {
         console.error('No company ID supplied')
         return
       }
-      const { data, error } = await supabase
-        .from('boilers')
-        .select('*')
-        .eq('company_id', companyId)
-        .eq('status', 'Active')
-        .order('price')
-
-      if (!error && data) {
-        setBoilers(data)
+      // Prices come back already marked up (ex VAT), cheapest first — see
+      // app/api/calculator/boilers/route.ts.
+      try {
+        const res = await fetch(`/api/calculator/boilers?company_id=${encodeURIComponent(companyId)}`)
+        const json = await res.json()
+        if (res.ok && Array.isArray(json.boilers)) {
+          setBoilers(json.boilers)
+        } else {
+          console.error('Failed to load boilers:', json.error)
+        }
+      } catch (err) {
+        console.error('Failed to load boilers:', err)
       }
 
       // Load pricing modifiers from Supabase (row-based pricing table)
