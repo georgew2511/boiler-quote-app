@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getAuthedCompanyId } from '@/lib/authedCompany'
 import { createAdminClient } from '@/utils/supabase/admin'
-import { fileKind, ImportError, readSupplierQuote, type ImportBoiler } from '@/lib/supplierImport'
+import { fileKind, ImportError, readSupplierQuote, suggestPhoto, type ImportBoiler, type PhotoCandidate } from '@/lib/supplierImport'
+import { TEMPLATE_COMPANY_ID } from '@/lib/templateCompany'
 
 // Reading a long PDF price list can take a minute or two.
 export const maxDuration = 300
@@ -53,6 +54,20 @@ export async function POST(request: NextRequest) {
 
     try {
         const lines = await readSupplierQuote(file, boilers as ImportBoiler[], aliases)
+
+        // Stock photos for "Add as a new boiler": the company's own boiler
+        // photos first, then the signup template catalogue's.
+        const { data: photos } = await supabase
+            .from('boilers')
+            .select('name, manufacturer, category, image, company_id')
+            .in('company_id', [companyId, TEMPLATE_COMPANY_ID])
+            .not('image', 'is', null)
+            .neq('image', '')
+        const pool: PhotoCandidate[] = (photos ?? []).sort(
+            (a, b) => Number(b.company_id === companyId) - Number(a.company_id === companyId)
+        )
+        for (const line of lines) Object.assign(line.suggested, suggestPhoto(line.suggested, pool))
+
         return NextResponse.json({ lines })
     } catch (err) {
         if (err instanceof ImportError) {

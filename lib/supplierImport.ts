@@ -18,6 +18,23 @@ export interface ImportBoiler {
 
 export type MatchConfidence = 'high' | 'medium' | 'low'
 
+export type BoilerTier = 'Good' | 'Better' | 'Best'
+
+/** What the quote says about a boiler, used to prefill "Add as a new boiler". */
+export interface SuggestedBoiler {
+    name: string
+    manufacturer: string | null
+    output: number | null
+    category: 'combi' | 'system' | 'regular' | null
+    tier: BoilerTier
+    /** Public URL of a stock photo of the same or a similar range, if one exists. */
+    imageUrl: string | null
+    /** Name of the boiler that photo belongs to, shown so the owner can judge it. */
+    imageFrom: string | null
+    /** True when the photo's range clearly matches; otherwise it's offered unticked. */
+    imageStrong: boolean
+}
+
 export interface ImportLine {
     description: string
     partNumber: string | null
@@ -30,6 +47,7 @@ export interface ImportLine {
     note: string
     /** Stable key for boiler_supplier_aliases; see aliasKey(). */
     aliasKey: string
+    suggested: SuggestedBoiler
 }
 
 export const ACCEPTED_TYPES: Record<string, 'pdf' | 'image' | 'text' | 'excel'> = {
@@ -124,7 +142,9 @@ For each boiler line:
 - manufacturer, output_kw and boiler_type as printed or clearly implied (e.g. "30C" or "Combi 30" means a 30kW combi; "Heat"/"Regular"/"Open vent" means regular). Use null when unknown.
 - matched_boiler_id: the id of the catalogue boiler that is the same product, or null if none is. Supplier names never match the catalogue exactly, so match on manufacturer, model range and output. Manufacturer, output (kW) and type must all agree; never match a 25kW boiler to a 30kW one, and never match across manufacturers or model ranges (e.g. Greenstar 4000 is not Greenstar 8000). If two catalogue boilers are equally plausible, pick the closer one and use confidence "low".
 - confidence: "high" when manufacturer, range, output and type all clearly agree; "medium" when one detail is inferred or abbreviated; "low" when unsure.
-- note: a few words on anything the installer should check (a pack with a flue included, an unusual discount, an ambiguous name). Empty string if nothing.`
+- note: a few words on anything the installer should check (a pack with a flue included, an unusual discount, an ambiguous name). Empty string if nothing.
+- suggested_name: what this boiler would be called if the installer added it to their catalogue, written in the same style as their existing catalogue names (manufacturer, range, model, type, output). Drop merchant codes, ErP labels and pack wording.
+- tier: where the range sits in the market: "Good" for budget ranges, "Better" for mid-range, "Best" for premium ranges.`
 
 const OUTPUT_SCHEMA = {
     type: 'object',
@@ -139,6 +159,7 @@ const OUTPUT_SCHEMA = {
                 required: [
                     'description', 'part_number', 'manufacturer', 'output_kw', 'boiler_type',
                     'unit_price_ex_vat', 'price_was_inc_vat', 'matched_boiler_id', 'confidence', 'note',
+                    'suggested_name', 'tier',
                 ],
                 properties: {
                     description: { type: 'string' },
@@ -151,6 +172,8 @@ const OUTPUT_SCHEMA = {
                     matched_boiler_id: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
                     confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
                     note: { type: 'string' },
+                    suggested_name: { type: 'string' },
+                    tier: { type: 'string', enum: ['Good', 'Better', 'Best'] },
                 },
             },
         },
@@ -168,9 +191,66 @@ interface RawLine {
     matched_boiler_id: number | null
     confidence: MatchConfidence
     note: string
+    suggested_name: string
+    tier: BoilerTier
 }
 
 export class ImportError extends Error {}
+
+export interface PhotoCandidate {
+    name: string
+    manufacturer: string | null
+    category: string | null
+    image: string
+}
+
+// Words that say nothing about which range a boiler belongs to.
+const GENERIC_WORDS = new Set(['combi', 'system', 'regular', 'heat', 'only', 'boiler', 'kw', 'erp', 'pack', 'with', 'and', 'the', 'natural', 'gas', 'ng', 'lpg'])
+
+function isOutputToken(t: string): boolean {
+    const m = t.match(/^(\d+)(kw|c|s|r)?$/)
+    // "050" (Vitodens 050-W) is a model number; outputs never have a leading zero.
+    return !!m && !m[1].startsWith('0') && (m[2] !== undefined || Number(m[1]) <= 60)
+}
+
+function rangeTokens(name: string, manufacturer: string | null): Set<string> {
+    const brand = new Set(normalise(manufacturer ?? '').split(' '))
+    return new Set(
+        normalise(name)
+            .split(' ')
+            // Drop outputs ("30", "30kw", "24c") but keep range numbers ("4000", "800").
+            .filter((t) => t && !GENERIC_WORDS.has(t) && !brand.has(t) && !isOutputToken(t))
+    )
+}
+
+/**
+ * A stock photo for a boiler being added from a quote: one from the same
+ * manufacturer sharing the most range words ("Greenstar 4000", "Easicom3"),
+ * preferring the same type. Boilers in one range look the same whatever their
+ * output, so any output will do. It's a strong match when one name's range
+ * words all appear in the other; otherwise it's only a similar range.
+ */
+export function suggestPhoto(
+    suggested: SuggestedBoiler,
+    pool: PhotoCandidate[],
+): Pick<SuggestedBoiler, 'imageUrl' | 'imageFrom' | 'imageStrong'> {
+    const brand = normalise(suggested.manufacturer ?? suggested.name).split(' ')[0]
+    const wanted = rangeTokens(suggested.name, suggested.manufacturer)
+    let best: { score: number; candidate: PhotoCandidate; strong: boolean } | null = null
+    for (const candidate of pool) {
+        if (normalise(candidate.manufacturer ?? candidate.name).split(' ')[0] !== brand) continue
+        const tokens = rangeTokens(candidate.name, candidate.manufacturer)
+        const shared = [...wanted].filter((t) => tokens.has(t)).length
+        if (!shared) continue
+        const score = shared * 2 + (suggested.category && candidate.category === suggested.category ? 1 : 0)
+        if (!best || score > best.score) {
+            best = { score, candidate, strong: shared === wanted.size || shared === tokens.size }
+        }
+    }
+    return best
+        ? { imageUrl: best.candidate.image, imageFrom: best.candidate.name, imageStrong: best.strong }
+        : { imageUrl: null, imageFrom: null, imageStrong: false }
+}
 
 export async function readSupplierQuote(
     file: File,
@@ -245,6 +325,16 @@ export function checkLine(line: RawLine, byId: Map<number, ImportBoiler>, aliase
         unitPriceExVat: Math.round(Number(line.unit_price_ex_vat) * 100) / 100,
         priceWasIncVat: !!line.price_was_inc_vat,
         aliasKey: key,
+        suggested: {
+            name: line.suggested_name?.trim() || line.description,
+            manufacturer: line.manufacturer || null,
+            output: line.output_kw === null ? null : Number(line.output_kw),
+            category: line.boiler_type || null,
+            tier: (['Good', 'Better', 'Best'] as const).includes(line.tier) ? line.tier : 'Better',
+            imageUrl: null,
+            imageFrom: null,
+            imageStrong: false,
+        },
     }
 
     const remembered = aliases.get(key)

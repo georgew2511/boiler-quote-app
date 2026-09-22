@@ -1,34 +1,25 @@
 'use client'
 
-import { useMemo, useState, useTransition } from 'react'
+import { Fragment, useMemo, useState, useTransition } from 'react'
 import { applyBoilerMarkup, effectiveBoilerMarkup } from '@/lib/boilerMarkup'
 import type { ImportBoiler, ImportLine, MatchConfidence } from '@/lib/supplierImport'
+import { shrinkImage } from './shrinkImage'
 import { applySupplierPrices } from './actions'
+import NewBoilerForm from './NewBoilerForm'
 
 interface Row {
     line: ImportLine
     boilerId: number | null
     price: string
     include: boolean
+    /** The "Add as a new boiler" form is open under this row. */
+    adding: boolean
+    /** This row's boiler was created from the quote during this import. */
+    added: boolean
 }
 
 const CONFIDENCE_RANK: Record<MatchConfidence, number> = { high: 0, medium: 1, low: 2 }
 const BIG_CHANGE = 0.3 // flag price moves of more than 30%
-
-// Phone photos of paper quotes are often 5–10MB; the upload limit is 4MB.
-// Re-encode anything over ~1.5MB as a JPEG no wider/taller than 2400px,
-// which keeps printed text perfectly legible.
-async function shrinkImage(file: File): Promise<File> {
-    if (!file.type.startsWith('image/') || file.size < 1.5 * 1024 * 1024) return file
-    const bitmap = await createImageBitmap(file)
-    const scale = Math.min(1, 2400 / Math.max(bitmap.width, bitmap.height))
-    const canvas = document.createElement('canvas')
-    canvas.width = Math.round(bitmap.width * scale)
-    canvas.height = Math.round(bitmap.height * scale)
-    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
-    return blob ? new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }) : file
-}
 
 function money(n: number) {
     return `£${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -40,13 +31,16 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
     const [error, setError] = useState<string | null>(null)
     const [rows, setRows] = useState<Row[] | null>(null)
     const [saving, startSaving] = useTransition()
+    // Grows when a boiler is added from the quote, so it appears in every
+    // row's dropdown straight away.
+    const [catalogue, setCatalogue] = useState(boilers)
 
-    const byId = useMemo(() => new Map(boilers.map((b) => [b.id, b])), [boilers])
+    const byId = useMemo(() => new Map(catalogue.map((b) => [b.id, b])), [catalogue])
     const grouped = useMemo(() => {
         const groups: Record<string, ImportBoiler[]> = {}
-        for (const b of boilers) (groups[b.category || 'other'] ??= []).push(b)
+        for (const b of catalogue) (groups[b.category || 'other'] ??= []).push(b)
         return groups
-    }, [boilers])
+    }, [catalogue])
 
     async function readQuote() {
         if (!file) return
@@ -55,7 +49,9 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
         setRows(null)
         try {
             const body = new FormData()
-            body.append('file', await shrinkImage(file))
+            // Phone photos of paper quotes are often 5–10MB; the upload limit
+            // is 4MB. A 2400px JPEG keeps printed text perfectly legible.
+            body.append('file', await shrinkImage(file, { overBytes: 1.5 * 1024 * 1024, maxSide: 2400, type: 'image/jpeg' }))
             const res = await fetch('/api/admin/boilers/import-quote', { method: 'POST', body })
             const json = await res.json().catch(() => ({ error: 'The upload failed. Try a smaller file.' }))
             if (!res.ok) {
@@ -89,6 +85,8 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
                 line.matchedBoilerId !== null &&
                 line.confidence !== 'low' &&
                 best.get(line.matchedBoilerId) === i,
+            adding: false,
+            added: false,
         }))
     }
 
@@ -100,7 +98,8 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
     const selectedIds = selected.map((r) => r.boilerId!)
     const duplicateIds = new Set(selectedIds.filter((id, i) => selectedIds.indexOf(id) !== i))
     const matchedIds = new Set((rows ?? []).map((r) => r.boilerId).filter((id): id is number => id !== null))
-    const notOnQuote = boilers.filter((b) => !matchedIds.has(b.id))
+    const notOnQuote = catalogue.filter((b) => !matchedIds.has(b.id))
+    const unmatchedCount = (rows ?? []).filter((r) => r.boilerId === null).length
 
     function apply() {
         if (duplicateIds.size) return
@@ -162,6 +161,12 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
                             <p className="text-sm text-slate-500">
                                 Ticked rows will update that boiler&apos;s trade price. Check anything amber, and pick the right
                                 boiler for any row we couldn&apos;t match.
+                                {unmatchedCount > 0 && (
+                                    <>
+                                        {' '}Not in your catalogue yet? Choose <strong>+ Add as a new boiler</strong> from its
+                                        dropdown.
+                                    </>
+                                )}
                             </p>
                         </div>
                         <button
@@ -200,10 +205,10 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
                                     const change = boiler && boiler.price > 0 ? (newPrice - boiler.price) / boiler.price : null
                                     const bigChange = change !== null && Math.abs(change) > BIG_CHANGE
                                     const markup = boiler ? effectiveBoilerMarkup(boiler.markup_percent, defaultMarkup) : defaultMarkup
-                                    const needsLook = row.line.confidence !== 'high' || bigChange || !boiler
+                                    const needsLook = !row.added && (row.line.confidence !== 'high' || bigChange || !boiler)
                                     return (
+                                        <Fragment key={i}>
                                         <tr
-                                            key={i}
                                             className={`border-b border-slate-100 align-top last:border-0 ${needsLook ? 'bg-amber-50/60' : ''}`}
                                         >
                                             <td className="py-3 pr-3">
@@ -220,7 +225,11 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
                                                 <div className="font-medium text-slate-900">{row.line.description}</div>
                                                 {row.line.partNumber && <div className="text-xs text-slate-500">Part {row.line.partNumber}</div>}
                                                 <div className="mt-1 flex flex-wrap gap-1">
-                                                    <ConfidenceBadge line={row.line} />
+                                                    {row.added ? (
+                                                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800">Added to catalogue</span>
+                                                    ) : (
+                                                        <ConfidenceBadge line={row.line} />
+                                                    )}
                                                     {row.line.priceWasIncVat && (
                                                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">VAT removed</span>
                                                     )}
@@ -229,14 +238,19 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
                                             </td>
                                             <td className="py-3 pr-3">
                                                 <select
-                                                    value={row.boilerId ?? ''}
+                                                    value={row.adding ? 'new' : row.boilerId ?? ''}
                                                     onChange={(e) => {
+                                                        if (e.target.value === 'new') {
+                                                            update(i, { adding: true, boilerId: null, include: false })
+                                                            return
+                                                        }
                                                         const id = e.target.value ? Number(e.target.value) : null
-                                                        update(i, { boilerId: id, include: id !== null })
+                                                        update(i, { boilerId: id, include: id !== null, adding: false })
                                                     }}
                                                     className="w-64 rounded-xl border border-slate-300 bg-white px-2 py-2"
                                                 >
                                                     <option value="">Not one of mine: skip</option>
+                                                    <option value="new">+ Add as a new boiler…</option>
                                                     {Object.entries(grouped).map(([category, list]) => (
                                                         <optgroup key={category} label={category}>
                                                             {list.map((b) => (
@@ -272,6 +286,29 @@ export default function SupplierImport({ boilers, defaultMarkup }: { boilers: Im
                                                 )}
                                             </td>
                                         </tr>
+                                        {row.adding && (
+                                            <tr className="border-b border-slate-100 bg-blue-50/40">
+                                                <td colSpan={7} className="p-4">
+                                                    <NewBoilerForm
+                                                        line={row.line}
+                                                        price={row.price}
+                                                        defaultMarkup={defaultMarkup}
+                                                        onCancel={() => update(i, { adding: false })}
+                                                        onAdded={(boiler) => {
+                                                            setCatalogue((c) => [...c, boiler])
+                                                            update(i, {
+                                                                adding: false,
+                                                                added: true,
+                                                                boilerId: boiler.id,
+                                                                include: true,
+                                                                price: String(boiler.price),
+                                                            })
+                                                        }}
+                                                    />
+                                                </td>
+                                            </tr>
+                                        )}
+                                        </Fragment>
                                     )
                                 })}
                             </tbody>
